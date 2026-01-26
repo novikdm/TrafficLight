@@ -1,8 +1,17 @@
 #include <iostream>
-// #include <gpiod.h>
+#include <gpiod.h>
 #include <unistd.h>
 using namespace std;
 
+const char* TRAFIC_LIGHT_CHIP = "gpiochip0";
+const unsigned int RED_PIN = 17;
+const unsigned int YELLOW_PIN = 27;
+const unsigned int GREEN_PIN = 22;
+
+gpiod_chip* chip = nullptr;
+gpiod_line* line_red = nullptr;
+gpiod_line* line_yellow = nullptr;
+gpiod_line* line_green = nullptr;
 
 enum Command {
   HELP,
@@ -16,15 +25,30 @@ enum Command {
 
 
 void trafic_light_on(){
-    cout << "trafic_light_on" << std::endl;
+    gpiod_line_set_value(line_red, 1);
+    gpiod_line_set_value(line_yellow, 1);
+    gpiod_line_set_value(line_green, 1);
 }
 
 void trafic_light_off(){
-    cout << "trafic_light_off" << std::endl;
+    gpiod_line_set_value(line_red, 0);
+    gpiod_line_set_value(line_yellow, 0);
+    gpiod_line_set_value(line_green, 0);
 }
 
 void trafic_light_test(){
-    cout << "trafic_light_test" << std::endl;
+    cout << "Trafic light test. Light on for 0.5 seconds one by one 3 times" << std::endl;
+    for(int i = 0; i < 3; i++){
+        gpiod_line_set_value(line_red, 1);
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        gpiod_line_set_value(line_red, 0);
+        gpiod_line_set_value(line_yellow, 1);
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        gpiod_line_set_value(line_yellow, 0);
+        gpiod_line_set_value(line_green, 1);
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        gpiod_line_set_value(line_green, 0);
+    }
 }
 
 void trafic_light_yellow_blink(){
@@ -48,6 +72,26 @@ void exit(){
 }
 
 int main() {
+
+    // Open GPIO chip
+    chip = gpiod_chip_open_by_name(chipname);
+    if (!chip) {
+        cout << "Error: Unable to open GPIO chip: " << TRAFIC_LIGHT_CHIP << std::endl;
+        return 1;
+    }
+
+    // Get GPIO line
+    line_red = gpiod_chip_get_line(chip, RED_PIN);
+    line_yellow = gpiod_chip_get_line(chip, YELLOW_PIN);
+    line_green = gpiod_chip_get_line(chip, GREEN_PIN);
+    if (!line_red || !line_yellow || !line_green) {
+        cout << "Error: Unable to get GPIO lines." << std::endl;
+        cout << "Red line: " << (line_red ? "Success" : "Failure") << std::endl;
+        cout << "Yellow line: " << (line_yellow ? "Success" : "Failure") << std::endl;
+        cout << "Green line: " << (line_green ? "Success" : "Failure") << std::endl;
+        gpiod_chip_close(chip);
+        return 1;
+    }
 
     cout << "\n################### Welcome to Trafic Light Simulator! ###################\n################### Version: v0.0.1 ###################\n" << std::endl;
     help();
@@ -107,5 +151,10 @@ int main() {
         }
 
     } while(EXIT != command);
+
+    gpiod_line_release(line_red);
+    gpiod_line_release(line_yellow);
+    gpiod_line_release(line_green);
+    gpiod_chip_close(chip);
     return 0;
 }
