@@ -1,17 +1,14 @@
-#include <iostream>
 #include <gpiod.h>
+#include <chrono>
+#include <thread>
+#include <iostream>
 #include <unistd.h>
+
 using namespace std;
 
-const char* TRAFIC_LIGHT_CHIP = "gpiochip0";
 const unsigned int RED_PIN = 17;
 const unsigned int YELLOW_PIN = 27;
 const unsigned int GREEN_PIN = 22;
-
-gpiod_chip* chip = nullptr;
-gpiod_line_settings* settings = nullptr;
-// gpiod_line* line_yellow = nullptr;
-// gpiod_line* line_green = nullptr;
 
 enum Command {
   HELP,
@@ -25,24 +22,20 @@ enum Command {
 
 
 void trafic_light_on(gpiod_line_request* request) {
-    // gpiod_line_set_value(line_red, 1);
-    // gpiod_line_set_value(line_yellow, 1);
-    // gpiod_line_set_value(line_green, 1);
     gpiod_line_request_set_value(request, RED_PIN, GPIOD_LINE_VALUE_INACTIVE);
 }
 
-void trafic_light_off() {
+void trafic_light_off(gpiod_line_request* request) {
     gpiod_line_request_release(request);
-    // gpiod_line_set_value(line_red, 0);
-    // gpiod_line_set_value(line_yellow, 0);
-    // gpiod_line_set_value(line_green, 0);
 }
 
 void trafic_light_test(gpiod_line_request* request) {
     cout << "Trafic light test. Light on for 0.5 seconds one by one 3 times" << std::endl;
-    for (int i = 0; i < 1000; i++) {
+    for (int i = 0; i < 10; i++) {
+        cout << i << std::endl;
         gpiod_line_request_set_value(request, RED_PIN, GPIOD_LINE_VALUE_INACTIVE);
-        std::this_thread::sleep_for(std::chrono::milliseconds(timeout_ms));
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        // sleep(1);
         gpiod_line_request_release(request);
     }
     // for(int i = 0; i < 3; i++){
@@ -79,14 +72,15 @@ void exit(gpiod_line_request* request) {
 }
 
 int main() {
-
+    
     // Open GPIO chip
-    chip = gpiod_chip_open("/dev/gpiochip0");
+    gpiod_chip* chip = gpiod_chip_open("/dev/gpiochip0");
     if (!chip) {
-        cout << "Error: Unable to open GPIO chip: " << TRAFIC_LIGHT_CHIP << std::endl;
+        cout << "Error: Unable to open GPIO chip: " << "/dev/gpiochip0" << std::endl;
         return 1;
     }
-
+    
+    gpiod_line_settings* settings = gpiod_line_settings_new();
     gpiod_line_settings_set_direction(settings, GPIOD_LINE_DIRECTION_OUTPUT);
     gpiod_line_settings_set_output_value(settings, GPIOD_LINE_VALUE_ACTIVE);
     
@@ -97,16 +91,12 @@ int main() {
     gpiod_request_config_set_consumer(req, "gpio-timer");
     
     gpiod_line_request* request_red = gpiod_chip_request_lines(chip, req, cfg);
+    // gpiod_line_request* request_red {nullptr};
     if (!request_red) {
         perror("gpiod_chip_request_lines");
         gpiod_chip_close(chip);
         return 1;
     }
-    // gpiod_line_request_set_value(request, 17, GPIOD_LINE_VALUE_INACTIVE);
-
-    // std::this_thread::sleep_for(std::chrono::milliseconds(timeout_ms));
-
-    // gpiod_line_request_release(request);
 
     cout << "\n################### Welcome to Trafic Light Simulator! ###################\n################### Version: v0.0.1 ###################\n" << std::endl;
     help();
