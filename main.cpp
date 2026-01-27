@@ -22,21 +22,22 @@ enum Command {
 
 
 void trafic_light_on(gpiod_line_request* request) {
-    gpiod_line_request_set_value(request, RED_PIN, GPIOD_LINE_VALUE_INACTIVE);
+    gpiod_line_request_set_value(request, RED_PIN, GPIOD_LINE_VALUE_ACTIVE);
 }
 
 void trafic_light_off(gpiod_line_request* request) {
-    gpiod_line_request_release(request);
+    gpiod_line_request_set_value(request, RED_PIN, GPIOD_LINE_VALUE_INACTIVE);
 }
 
 void trafic_light_test(gpiod_line_request* request) {
     cout << "Trafic light test. Light on for 0.5 seconds one by one 3 times" << std::endl;
     for (int i = 0; i < 10; i++) {
         cout << i << std::endl;
-        gpiod_line_request_set_value(request, RED_PIN, GPIOD_LINE_VALUE_INACTIVE);
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        gpiod_line_request_set_value(request, RED_PIN, GPIOD_LINE_VALUE_ACTIVE);
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
         // sleep(1);
-        gpiod_line_request_release(request);
+        gpiod_line_request_set_value(request, RED_PIN, GPIOD_LINE_VALUE_INACTIVE);
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
     }
     // for(int i = 0; i < 3; i++){
     //     gpiod_line_set_value(line_red, 1);
@@ -82,7 +83,6 @@ int main() {
     
     gpiod_line_settings* settings = gpiod_line_settings_new();
     gpiod_line_settings_set_direction(settings, GPIOD_LINE_DIRECTION_OUTPUT);
-    gpiod_line_settings_set_output_value(settings, GPIOD_LINE_VALUE_ACTIVE);
     
     gpiod_line_config* cfg = gpiod_line_config_new();
     gpiod_line_config_add_line_settings(cfg, &RED_PIN, 1, settings);
@@ -160,6 +160,7 @@ int main() {
     // gpiod_line_release(line_red);
     // gpiod_line_release(line_yellow);
     // gpiod_line_release(line_green);
+    gpiod_line_request_release(request_red);
     gpiod_chip_close(chip);
     return 0;
 }
