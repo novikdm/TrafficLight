@@ -3,6 +3,7 @@
 #include <thread>
 #include <iostream>
 #include <unistd.h>
+#include <atomic>
 
 using namespace std;
 
@@ -10,6 +11,7 @@ const unsigned int RED_PIN = 17;
 const unsigned int YELLOW_PIN = 27;
 const unsigned int GREEN_PIN = 22;
 
+gpiod_chip* chip {nullptr};
 gpiod_line_request* request_red {nullptr};
 gpiod_line_request* request_yellow {nullptr};
 gpiod_line_request* request_green {nullptr};
@@ -70,14 +72,14 @@ void trafic_light_on() {
         gpiod_line_request_set_value(request_green, GREEN_PIN, GPIOD_LINE_VALUE_ACTIVE);
         std::this_thread::sleep_for(std::chrono::milliseconds(13000));
         gpiod_line_request_set_value(request_green, GREEN_PIN, GPIOD_LINE_VALUE_INACTIVE);
-        for(int i = 0; i < 5; i++) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        for(int i = 0; i < 4; i++) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(400));
             gpiod_line_request_set_value(request_green, GREEN_PIN, GPIOD_LINE_VALUE_ACTIVE);
-            std::this_thread::sleep_for(std::chrono::milliseconds(200));
+            std::this_thread::sleep_for(std::chrono::milliseconds(400));
             gpiod_line_request_set_value(request_green, GREEN_PIN, GPIOD_LINE_VALUE_INACTIVE);
         }
         gpiod_line_request_set_value(request_yellow, YELLOW_PIN, GPIOD_LINE_VALUE_ACTIVE);
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         gpiod_line_request_set_value(request_yellow, YELLOW_PIN, GPIOD_LINE_VALUE_INACTIVE);
     }
     stop_thread = false;
@@ -110,9 +112,9 @@ void trafic_light_yellow_blink() {
     is_thread_running = true;
     while(!stop_thread) {
         gpiod_line_request_set_value(request_yellow, YELLOW_PIN, GPIOD_LINE_VALUE_ACTIVE);
-        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        std::this_thread::sleep_for(std::chrono::milliseconds(400));
         gpiod_line_request_set_value(request_yellow, YELLOW_PIN, GPIOD_LINE_VALUE_INACTIVE);
-        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        std::this_thread::sleep_for(std::chrono::milliseconds(400));
     }
     stop_thread = false;
     is_thread_running = false;
@@ -131,9 +133,9 @@ void help() {
 
 void exit() {
     trafic_light_off();
-    if (t.joinable()) {
+    if (working_thread.joinable()) {
         stop_thread = true;
-        t.join();
+        working_thread.join();
     }
     gpiod_line_request_release(request_red);
     gpiod_line_request_release(request_yellow);
@@ -145,7 +147,7 @@ void exit() {
 void stop_working_thread() {
     if (is_thread_running) {
         stop_thread = true;
-        t.join();
+        working_thread.join();
     }
 }
 
@@ -153,7 +155,7 @@ int main() {
     cout << "\n################### Welcome to Trafic Light Simulator! ###################\n################### Version: v0.0.1 ###################\n" << std::endl;
     
     // Open GPIO chip
-    gpiod_chip* chip = gpiod_chip_open("/dev/gpiochip0");
+    chip = gpiod_chip_open("/dev/gpiochip0");
     if (!chip) {
         cout << "Error: Unable to open GPIO chip: " << "/dev/gpiochip0" << std::endl;
         return 1;
