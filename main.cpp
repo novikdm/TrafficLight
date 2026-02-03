@@ -10,50 +10,112 @@ const unsigned int RED_PIN = 17;
 const unsigned int YELLOW_PIN = 27;
 const unsigned int GREEN_PIN = 22;
 
-enum Command {
-  HELP,
-  TRON,
-  TROF,
-  TRYB,
-  TRT,
-  EXIT,
-  DEF
-};
+gpiod_line_request* request_red {nullptr};
+gpiod_line_request* request_yellow {nullptr};
+gpiod_line_request* request_green {nullptr};
+
+std::thread working_thread;
+
+std::atomic<bool> is_thread_running(false);
+std::atomic<bool> stop_thread(false);
 
 
-void trafic_light_on(gpiod_line_request* request) {
-    gpiod_line_request_set_value(request, RED_PIN, GPIOD_LINE_VALUE_ACTIVE);
+void init_gpio_requests(gpiod_chip* chip) {
+    // Request RED line
+    gpiod_line_settings* settings_red = gpiod_line_settings_new();
+    gpiod_line_settings_set_direction(settings_red, GPIOD_LINE_DIRECTION_OUTPUT);
+    
+    gpiod_line_config* cfg_red = gpiod_line_config_new();
+    gpiod_line_config_add_line_settings(cfg_red, &RED_PIN, 1, settings_red);
+    
+    gpiod_request_config* req_red = gpiod_request_config_new();
+    gpiod_request_config_set_consumer(req_red, "gpio-timer");
+    
+    request_red = gpiod_chip_request_lines(chip, req_red, cfg_red);
+    
+    // Request YELLOW line
+    gpiod_line_settings* settings_yellow = gpiod_line_settings_new();
+    gpiod_line_settings_set_direction(settings_yellow, GPIOD_LINE_DIRECTION_OUTPUT);
+
+    gpiod_line_config* cfg_yellow = gpiod_line_config_new();
+    gpiod_line_config_add_line_settings(cfg_yellow, &YELLOW_PIN, 1, settings_yellow);
+    
+    gpiod_request_config* req_yellow = gpiod_request_config_new();
+    gpiod_request_config_set_consumer(req_yellow, "gpio-timer");
+
+    request_yellow = gpiod_chip_request_lines(chip, req_yellow, cfg_yellow);
+
+     // Request GREEEN line
+     gpiod_line_settings* settings_green = gpiod_line_settings_new();
+    gpiod_line_settings_set_direction(settings_green, GPIOD_LINE_DIRECTION_OUTPUT);
+    
+    gpiod_line_config* cfg_green = gpiod_line_config_new();
+    gpiod_line_config_add_line_settings(cfg_green, &GREEN_PIN, 1, settings_green);
+    
+    gpiod_request_config* req_green = gpiod_request_config_new();
+    gpiod_request_config_set_consumer(req_green, "gpio-timer");
+    
+    request_green = gpiod_chip_request_lines(chip, req_green, cfg_green);
 }
 
-void trafic_light_off(gpiod_line_request* request) {
-    gpiod_line_request_set_value(request, RED_PIN, GPIOD_LINE_VALUE_INACTIVE);
-}
-
-void trafic_light_test(gpiod_line_request* request) {
-    cout << "Trafic light test. Light on for 0.5 seconds one by one 3 times" << std::endl;
-    for (int i = 0; i < 10; i++) {
-        cout << i << std::endl;
-        gpiod_line_request_set_value(request, RED_PIN, GPIOD_LINE_VALUE_ACTIVE);
+void trafic_light_on() {
+    is_thread_running = true;
+    while(!stop_thread) {
+        gpiod_line_request_set_value(request_red, RED_PIN, GPIOD_LINE_VALUE_ACTIVE);
+        std::this_thread::sleep_for(std::chrono::milliseconds(7000));
+        gpiod_line_request_set_value(request_red, RED_PIN, GPIOD_LINE_VALUE_INACTIVE);
+        gpiod_line_request_set_value(request_yellow, YELLOW_PIN, GPIOD_LINE_VALUE_ACTIVE);
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        gpiod_line_request_set_value(request_yellow, YELLOW_PIN, GPIOD_LINE_VALUE_INACTIVE);
+        gpiod_line_request_set_value(request_green, GREEN_PIN, GPIOD_LINE_VALUE_ACTIVE);
+        std::this_thread::sleep_for(std::chrono::milliseconds(13000));
+        gpiod_line_request_set_value(request_green, GREEN_PIN, GPIOD_LINE_VALUE_INACTIVE);
+        for(int i = 0; i < 5; i++) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(200));
+            gpiod_line_request_set_value(request_green, GREEN_PIN, GPIOD_LINE_VALUE_ACTIVE);
+            std::this_thread::sleep_for(std::chrono::milliseconds(200));
+            gpiod_line_request_set_value(request_green, GREEN_PIN, GPIOD_LINE_VALUE_INACTIVE);
+        }
+        gpiod_line_request_set_value(request_yellow, YELLOW_PIN, GPIOD_LINE_VALUE_ACTIVE);
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
-        // sleep(1);
-        gpiod_line_request_set_value(request, RED_PIN, GPIOD_LINE_VALUE_INACTIVE);
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        gpiod_line_request_set_value(request_yellow, YELLOW_PIN, GPIOD_LINE_VALUE_INACTIVE);
     }
-    // for(int i = 0; i < 3; i++){
-    //     gpiod_line_set_value(line_red, 1);
-    //     std::this_thread::sleep_for(std::chrono::milliseconds(500));
-    //     gpiod_line_set_value(line_red, 0);
-    //     gpiod_line_set_value(line_yellow, 1);
-    //     std::this_thread::sleep_for(std::chrono::milliseconds(500));
-    //     gpiod_line_set_value(line_yellow, 0);
-    //     gpiod_line_set_value(line_green, 1);
-    //     std::this_thread::sleep_for(std::chrono::milliseconds(500));
-    //     gpiod_line_set_value(line_green, 0);
-    // }
+    stop_thread = false;
+    is_thread_running = false;
+}
+
+void trafic_light_off() {
+    gpiod_line_request_set_value(request_red, RED_PIN, GPIOD_LINE_VALUE_INACTIVE);
+    gpiod_line_request_set_value(request_yellow, YELLOW_PIN, GPIOD_LINE_VALUE_INACTIVE);
+    gpiod_line_request_set_value(request_green, GREEN_PIN, GPIOD_LINE_VALUE_INACTIVE);
+}
+
+void trafic_light_test() {
+    cout << "Trafic light test. Light on for 0.5 seconds one by one 3 times" << std::endl;
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    for(int i = 0; i < 3; i++){
+        gpiod_line_request_set_value(request_red, RED_PIN, GPIOD_LINE_VALUE_ACTIVE);
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        gpiod_line_request_set_value(request_red, RED_PIN, GPIOD_LINE_VALUE_INACTIVE);
+        gpiod_line_request_set_value(request_yellow, YELLOW_PIN, GPIOD_LINE_VALUE_ACTIVE);
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        gpiod_line_request_set_value(request_yellow, YELLOW_PIN, GPIOD_LINE_VALUE_INACTIVE);
+        gpiod_line_request_set_value(request_green, GREEN_PIN, GPIOD_LINE_VALUE_ACTIVE);
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        gpiod_line_request_set_value(request_green, GREEN_PIN, GPIOD_LINE_VALUE_INACTIVE);
+    }
 }
 
 void trafic_light_yellow_blink() {
-    cout << "trafic_light_yellow_blink" << std::endl;
+    is_thread_running = true;
+    while(!stop_thread) {
+        gpiod_line_request_set_value(request_yellow, YELLOW_PIN, GPIOD_LINE_VALUE_ACTIVE);
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        gpiod_line_request_set_value(request_yellow, YELLOW_PIN, GPIOD_LINE_VALUE_INACTIVE);
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    }
+    stop_thread = false;
+    is_thread_running = false;
 }
 
 void help() {
@@ -67,12 +129,28 @@ void help() {
     cout << "!!! NOTE: all commands case sensitive !!!" << std::endl;
 }
 
-void exit(gpiod_line_request* request) {
-    trafic_light_off(request);
+void exit() {
+    trafic_light_off();
+    if (t.joinable()) {
+        stop_thread = true;
+        t.join();
+    }
+    gpiod_line_request_release(request_red);
+    gpiod_line_request_release(request_yellow);
+    gpiod_line_request_release(request_green);
+    gpiod_chip_close(chip);
     cout << "\n    Goodbye!" << std::endl;
 }
 
+void stop_working_thread() {
+    if (is_thread_running) {
+        stop_thread = true;
+        t.join();
+    }
+}
+
 int main() {
+    cout << "\n################### Welcome to Trafic Light Simulator! ###################\n################### Version: v0.0.1 ###################\n" << std::endl;
     
     // Open GPIO chip
     gpiod_chip* chip = gpiod_chip_open("/dev/gpiochip0");
@@ -80,87 +158,48 @@ int main() {
         cout << "Error: Unable to open GPIO chip: " << "/dev/gpiochip0" << std::endl;
         return 1;
     }
-    
-    gpiod_line_settings* settings = gpiod_line_settings_new();
-    gpiod_line_settings_set_direction(settings, GPIOD_LINE_DIRECTION_OUTPUT);
-    
-    gpiod_line_config* cfg = gpiod_line_config_new();
-    gpiod_line_config_add_line_settings(cfg, &RED_PIN, 1, settings);
-    
-    gpiod_request_config* req = gpiod_request_config_new();
-    gpiod_request_config_set_consumer(req, "gpio-timer");
-    
-    gpiod_line_request* request_red = gpiod_chip_request_lines(chip, req, cfg);
-    // gpiod_line_request* request_red {nullptr};
-    if (!request_red) {
-        perror("gpiod_chip_request_lines");
+
+    init_gpio_requests(chip);
+
+    if (!request_red || !request_yellow || !request_green) {
+        cout << "Error: gpiod_chip_request_lines" << std::endl;
         gpiod_chip_close(chip);
         return 1;
     }
 
-    cout << "\n################### Welcome to Trafic Light Simulator! ###################\n################### Version: v0.0.1 ###################\n" << std::endl;
     help();
 
-    string input = "";
-
-    Command command = EXIT;
+    string input;
 
     do {
+        input = "";
         cout << "\nCommand: ";
         cin >> input;
-        cout << "\n";
+        cout << std::endl;
 
-        //TODO: rework this part
-        // Generated code by AI
-        // Map input string to Command enum
         if (input == "help") {
-            command = HELP;
+            help();
         } else if (input == "trlon") {
-            command = TRON;
+            stop_working_thread();
+            working_thread = std::thread(trafic_light_on);
         } else if (input == "trloff") {
-            command = TROF;
+            stop_working_thread();
+            trafic_light_off();
         } else if (input == "trlyb") {
-            command = TRYB;
+            stop_working_thread();
+            working_thread = std::thread(trafic_light_yellow_blink);
         } else if (input == "trltest") {
-            command = TRT;
+            stop_working_thread();
+            trafic_light_test();
         } else if (input == "exit") {
-            command = EXIT;
+            stop_working_thread();
+            exit();
         } else {
-            command = DEF;
-        }
-        // Ugly part ends here
-
-        switch(command) {
-            case HELP :
-              help();
-              break;
-            case EXIT :
-              exit(request_red);
-              break;
-            case TRON :
-              trafic_light_on(request_red);
-              break;
-            case TROF :
-              trafic_light_off(request_red);
-              break;
-            case TRYB :
-              trafic_light_yellow_blink();
-              break;
-             case TRT :
-              trafic_light_test(request_red);
-              break;
-            default :
-              cout << "\nError! Invalid command. Please enter one of them:"  << std::endl;
-              help();
-              return 1;
+            cout << "\nError! Invalid command. \nEnter help to see valid commands."  << std::endl;
         }
 
-    } while(EXIT != command);
 
-    // gpiod_line_release(line_red);
-    // gpiod_line_release(line_yellow);
-    // gpiod_line_release(line_green);
-    gpiod_line_request_release(request_red);
-    gpiod_chip_close(chip);
+    } while(input != "exit");
+
     return 0;
 }
