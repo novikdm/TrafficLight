@@ -25,6 +25,7 @@ TrafficLightController *current_controller{nullptr};
 void help() {
     cout << "   Available commands:\n" << std::endl;
     cout << "help : print instructions" << std::endl;
+    cout << "rcnf : reload configs" << std::endl;
     cout << "chcnf: choose traffic light config" << std::endl;
     cout << "trlon : enable trafic light mode" << std::endl;
     cout << "trloff : disable all lights" << std::endl;
@@ -64,6 +65,9 @@ void read_configs() {
 }
 
 TrafficLightController* create_controller(string instance_name, gpiod_chip* chip) {
+    if(traffic_light_configs.size() == 0) {
+        std::cerr << "Configs not found try reload configs!!!" << std::endl;
+    }
     for (auto& pair : traffic_light_configs) {
         if (pair.first == instance_name) {
             TrafficLightController *controller = new TrafficLightController(pair.second, chip, is_thread_running, stop_thread);
@@ -71,8 +75,8 @@ TrafficLightController* create_controller(string instance_name, gpiod_chip* chip
             return controller;
         }
     }
-        std::cerr << "Error: Traffic light config not found for instance name: " << instance_name << std::endl;
-        return nullptr;
+    std::cerr << "Error: Traffic light config not found for instance name: " << instance_name << std::endl;
+    return nullptr;
 }
 
 int main() {
@@ -116,6 +120,8 @@ int main() {
 
         if (command == "help") {
             help();
+        } else if (command == "rcnf") {
+            read_configs();
         } else if (command == "chcnf") {
             parameter = "";
             cout << "\nEnter config name: ";
@@ -127,6 +133,10 @@ int main() {
             if(parameter != current_traffic_light) {
                 current_traffic_light = parameter;
                 current_controller = create_controller(current_traffic_light, chip);
+                if(current_controller == nullptr) {
+                    cout << "Error: No traffic light selected. Use 'chcnf' to select a traffic light." << std::endl;
+                    continue;
+                }
                 cout << "New traffic light selected: " << current_traffic_light << std::endl;
             } else {
                 cout << "Traffic light already selected: " << current_traffic_light << std::endl;

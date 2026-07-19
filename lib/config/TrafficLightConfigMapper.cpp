@@ -20,7 +20,7 @@ void TrafficLightConfigMapper::read_config_from_base_config_file(const string& c
         pt::read_ini(config_file_path, tree);
         this->config_file_path = tree.get<string>(traffic_light_config_name);
     } catch (const std::exception& e) {
-        std::cerr << "Error reading base config file: " << e.what() << std::endl;
+        std::cerr << "\nError reading base config file: " << e.what() << std::endl;
     }
 }
 
@@ -33,7 +33,7 @@ void TrafficLightConfigMapper::save_all(const map<string, TrafficLightConfig>& t
     try {
          pt::write_json(config_file_path, tl_config_to_json(tl_cfg_map));
     } catch (const std::exception& e) {
-        std::cerr << "Error saving config to file " << config_file_path << ": \n"
+        std::cerr << "\nError saving config to file " << config_file_path << ": \n"
             << e.what() << std::endl;
     }
 }
@@ -77,10 +77,11 @@ TrafficLightConfig TrafficLightConfigMapper::map_to_object(const string &instanc
 
         }
     } catch (const std::exception& e) {
-        std::cerr << "Error reading config from file " << config_file_path << ": \n"
+        std::cerr << "\nError reading config from file " << config_file_path << ": \n"
             << e.what() << std::endl;
     }
-    std::cerr << "Error reading config from file: Instanse '" << instance_name << "' not found!"<< std::endl;
+    std::cerr << "\nError reading config from file: Instanse '" << instance_name << "' not found!"<< std::endl;
+    return result;
 }
 
 map<string, TrafficLightConfig> TrafficLightConfigMapper::map_all_from_file() {
@@ -95,7 +96,7 @@ map<string, TrafficLightConfig> TrafficLightConfigMapper::map_all_from_file() {
             result[key] = map_from_ptree_to_object(instanse);
         }
     } catch (const std::exception& e) {
-        std::cerr << "Error reading config from file " << config_file_path << ": \n"
+        std::cerr << "\nError reading config from file " << config_file_path << ": \n"
             << e.what() << std::endl;
     }
     return result;

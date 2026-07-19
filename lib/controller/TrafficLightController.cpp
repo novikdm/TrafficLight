@@ -49,7 +49,6 @@ void TrafficLightController::init_gpio_requests(gpiod_chip *chip) {
 }
 
 void TrafficLightController::trafic_light_on() {
-cout << "\n Trafic light on STARTED" << std::endl;
     *is_thread_running = true;
     while (!(*stop_thread))
     {
@@ -76,7 +75,7 @@ cout << "\n Trafic light on STARTED" << std::endl;
         gpiod_line_request_set_value(request_yellow, *(config.get_yellow_pin()), GPIOD_LINE_VALUE_INACTIVE);
     }
     *stop_thread = false;
-*is_thread_running = false;
+    *is_thread_running = false;
 }
 
 void TrafficLightController::trafic_light_off() {
@@ -107,9 +106,9 @@ void TrafficLightController::trafic_light_yellow_blink() {
     while (!(*stop_thread))
     {
         gpiod_line_request_set_value(request_yellow, *(config.get_yellow_pin()), GPIOD_LINE_VALUE_ACTIVE);
-        std::this_thread::sleep_for(std::chrono::milliseconds(400));
+        std::this_thread::sleep_for(std::chrono::milliseconds(config.get_yellow_blinking_period()));
         gpiod_line_request_set_value(request_yellow, *(config.get_yellow_pin()), GPIOD_LINE_VALUE_INACTIVE);
-        std::this_thread::sleep_for(std::chrono::milliseconds(400));
+        std::this_thread::sleep_for(std::chrono::milliseconds(config.get_yellow_blinking_period()));
     }
     *stop_thread = false;
     *is_thread_running = false;
