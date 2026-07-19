@@ -50,8 +50,6 @@ void exit() {
 }
 
 void stop_working_thread() {
-    if (is_thread_running) {
-        stop_thread = true;
     if (*is_thread_running) {
         *stop_thread = true;
         working_thread.join();
