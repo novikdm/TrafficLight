@@ -6,7 +6,7 @@
 #include <unistd.h>
 #include <atomic>
 
-TrafficLightController::TrafficLightController(TrafficLightConfig config, gpiod_chip *chip) : config(config), chip(chip) {
+TrafficLightController::TrafficLightController(TrafficLightConfig config, gpiod_chip *chip, std::atomic<bool> *is_thread_running, std::atomic<bool> *stop_thread) : config(config), chip(chip), is_thread_running(is_thread_running), stop_thread(stop_thread) {
     init_gpio_requests(chip);
 }
 
@@ -49,8 +49,9 @@ void TrafficLightController::init_gpio_requests(gpiod_chip *chip) {
 }
 
 void TrafficLightController::trafic_light_on() {
-    is_thread_running = true;
-    while (!stop_thread)
+cout << "\n Trafic light on STARTED" << std::endl;
+    *is_thread_running = true;
+    while (!(*stop_thread))
     {
         gpiod_line_request_set_value(request_red, *(config.get_red_pin()), GPIOD_LINE_VALUE_ACTIVE);
         std::this_thread::sleep_for(std::chrono::milliseconds(config.get_red_time()));
@@ -74,8 +75,8 @@ void TrafficLightController::trafic_light_on() {
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         gpiod_line_request_set_value(request_yellow, *(config.get_yellow_pin()), GPIOD_LINE_VALUE_INACTIVE);
     }
-    stop_thread = false;
-    is_thread_running = false;
+    *stop_thread = false;
+*is_thread_running = false;
 }
 
 void TrafficLightController::trafic_light_off() {
@@ -102,16 +103,16 @@ void TrafficLightController::trafic_light_test() {
 }
 
 void TrafficLightController::trafic_light_yellow_blink() {
-    is_thread_running = true;
-    while (!stop_thread)
+    *is_thread_running = true;
+    while (!(*stop_thread))
     {
         gpiod_line_request_set_value(request_yellow, *(config.get_yellow_pin()), GPIOD_LINE_VALUE_ACTIVE);
         std::this_thread::sleep_for(std::chrono::milliseconds(400));
         gpiod_line_request_set_value(request_yellow, *(config.get_yellow_pin()), GPIOD_LINE_VALUE_INACTIVE);
         std::this_thread::sleep_for(std::chrono::milliseconds(400));
     }
-    stop_thread = false;
-    is_thread_running = false;
+    *stop_thread = false;
+    *is_thread_running = false;
 }
 
 void TrafficLightController::release_gpiod_line_requests() {

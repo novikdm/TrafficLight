@@ -14,18 +14,18 @@ using namespace std;
 gpiod_chip* chip {nullptr};
 string current_traffic_light {"Default_Name"};
 std::thread working_thread;
-std::atomic<bool> is_thread_running(false);
-std::atomic<bool> stop_thread(false);
+std::atomic<bool> *is_thread_running(nullptr);
+std::atomic<bool> *stop_thread(nullptr);
 
 map<string, TrafficLightConfig> traffic_light_configs;
-map<string, TrafficLightController> traffic_light_controllers;
+map<string, TrafficLightController *> traffic_light_controllers;
 TrafficLightController *current_controller{nullptr};
 
 
 void help() {
     cout << "   Available commands:\n" << std::endl;
     cout << "help : print instructions" << std::endl;
-    cout << "cd <name> : choose traffic light by name" << std::endl;
+    cout << "chcnf: choose traffic light config" << std::endl;
     cout << "trlon : enable trafic light mode" << std::endl;
     cout << "trloff : disable all lights" << std::endl;
     cout << "trlyb : enable only yellow light in blinking mode" << std::endl;
@@ -38,12 +38,12 @@ void exit() {
     if (current_controller) {
         working_thread = std::thread(&TrafficLightController::trafic_light_off, current_controller);
         if (working_thread.joinable()) {
-            stop_thread = true;
+            *stop_thread = true;
             working_thread.join();
         }
     }
     for(auto & pair : traffic_light_controllers) {
-        pair.second.release_gpiod_line_requests();
+        (*pair.second).release_gpiod_line_requests();
     }
     gpiod_chip_close(chip);
     cout << "\n    Goodbye!" << std::endl;
@@ -52,6 +52,8 @@ void exit() {
 void stop_working_thread() {
     if (is_thread_running) {
         stop_thread = true;
+    if (*is_thread_running) {
+        *stop_thread = true;
         working_thread.join();
     }
 }
@@ -64,17 +66,21 @@ void read_configs() {
 }
 
 TrafficLightController* create_controller(string instance_name, gpiod_chip* chip) {
-    auto config = traffic_light_configs.find(instance_name);
-    if (config != traffic_light_configs.end()) {
-        return new TrafficLightController(config->second, chip);
-    } else {
+    for (auto& pair : traffic_light_configs) {
+        if (pair.first == instance_name) {
+            TrafficLightController *controller = new TrafficLightController(pair.second, chip, is_thread_running, stop_thread);
+            traffic_light_controllers[instance_name] = controller;
+            return controller;
+        }
+    }
         std::cerr << "Error: Traffic light config not found for instance name: " << instance_name << std::endl;
         return nullptr;
-    }
 }
 
 int main() {
     cout << "Initialization"<< std::flush;
+    is_thread_running = new std::atomic<bool>(false);
+    stop_thread = new std::atomic<bool>(false);
     for (int i = 0; i < 5; i++) {
         cout << "." << std::flush;
         std::this_thread::sleep_for(std::chrono::milliseconds(200));
@@ -85,6 +91,7 @@ int main() {
         cout << "." << std::flush;
         std::this_thread::sleep_for(std::chrono::milliseconds(200));
     }
+    read_configs();
 
     cout << "\n" << std::endl;
     cout << "\n################### Welcome to Trafic Light Simulator! ###################\n################### Version: v0.1.0-b01-SNAPSHOT ###################\n" << std::endl;
@@ -100,18 +107,22 @@ int main() {
 
     help();
 
-    string input;
+    string command;
     string parameter;
 
     do {
-        input = "";
+        command = "";
         cout << "\nCommand: ";
-        cin >> input >> parameter;
+        cin >> command;
         cout << std::endl;
 
-        if (input == "help") {
+        if (command == "help") {
             help();
-        } else if (input == "cd") {
+        } else if (command == "chcnf") {
+            parameter = "";
+            cout << "\nEnter config name: ";
+            cin >> parameter;
+            cout << std::endl;
             if(parameter == "" || parameter == " ") {
                 cout << "Error: name is empty" << std::endl;
             }
@@ -122,43 +133,41 @@ int main() {
             } else {
                 cout << "Traffic light already selected: " << current_traffic_light << std::endl;
             }
-        } else if (input == "trlon") {
+        } else if (command == "trlon") {
             if(current_controller == nullptr) {
-                cout << "Error: No traffic light selected. Use 'cd <name>' to select a traffic light." << std::endl;
+                cout << "Error: No traffic light selected. Use 'chcnf' to select a traffic light." << std::endl;
                 continue;
             }
             stop_working_thread();
             working_thread = std::thread(&TrafficLightController::trafic_light_on, current_controller);
-        } else if (input == "trloff") {
+        } else if (command == "trloff") {
             if(current_controller == nullptr) {
-                cout << "Error: No traffic light selected. Use 'cd <name>' to select a traffic light." << std::endl;
+                cout << "Error: No traffic light selected. Use 'chcnf' to select a traffic light." << std::endl;
                 continue;
             }
             stop_working_thread();
             working_thread = std::thread(&TrafficLightController::trafic_light_off, current_controller);
-        } else if (input == "trlyb") {
+        } else if (command == "trlyb") {
             if(current_controller == nullptr) {
-                cout << "Error: No traffic light selected. Use 'cd <name>' to select a traffic light." << std::endl;
+                cout << "Error: No traffic light selected. Use 'chcnf' to select a traffic light." << std::endl;
                 continue;
             }
             stop_working_thread();
             working_thread = std::thread(&TrafficLightController::trafic_light_yellow_blink, current_controller);
-        } else if (input == "trltest") {
+        } else if (command == "trltest") {
             if(current_controller == nullptr) {
-                cout << "Error: No traffic light selected. Use 'cd <name>' to select a traffic light." << std::endl;
+                cout << "Error: No traffic light selected. Use 'chcnfch' to select a traffic light." << std::endl;
                 continue;
             }
             stop_working_thread();
             working_thread = std::thread(&TrafficLightController::trafic_light_test, current_controller);
-        } else if (input == "exit") {
+        } else if (command == "exit") {
             stop_working_thread();
             exit();
         } else {
             cout << "\nError! Invalid command. \nEnter help to see valid commands."  << std::endl;
         }
-
-
-    } while(input != "exit");
+    } while(command != "exit");
 
     return 0;
 }

@@ -12,16 +12,14 @@ class TrafficLightController {
         gpiod_line_request* request_red {nullptr};
         gpiod_line_request* request_yellow {nullptr};
         gpiod_line_request* request_green {nullptr};
-        std::thread working_thread {nullptr};
-        std::atomic<bool> is_thread_running {false};
-        std::atomic<bool> stop_thread {false};
+        std::atomic<bool> *is_thread_running {nullptr};
+        std::atomic<bool> *stop_thread {nullptr};
 
         void init_gpio_requests(gpiod_chip* chip);
 
 
     public:
-    
-        TrafficLightController(TrafficLightConfig config, gpiod_chip* chip);
+        TrafficLightController(TrafficLightConfig config, gpiod_chip* chip, std::atomic<bool> *is_thread_running, std::atomic<bool> *stop_thread);
         void trafic_light_on();
         void trafic_light_off();
         void trafic_light_test();
