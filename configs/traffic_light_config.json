@@ -9,7 +9,7 @@
         "yellow_time": "1000",
         "green_time": "13000",
         "green_time_blinking": "2000",
-        "yellow_blinking_period": "2000"
+        "yellow_blinking_period": "400"
     },
     "TrafficLight_2": {
         "id": "1",

@@ -6,7 +6,7 @@
 #include <unistd.h>
 #include <atomic>
 
-TrafficLightController::TrafficLightController(TrafficLightConfig config, gpiod_chip *chip, std::atomic<bool> *is_thread_running, std::atomic<bool> *stop_thread) : config(config), chip(chip), is_thread_running(is_thread_running), stop_thread(stop_thread) {
+TrafficLightController::TrafficLightController(TrafficLightConfig *config, gpiod_chip *chip, std::atomic<bool> *is_thread_running, std::atomic<bool> *stop_thread) : config(config), chip(chip), is_thread_running(is_thread_running), stop_thread(stop_thread) {
     init_gpio_requests(chip);
 }
 
@@ -16,7 +16,7 @@ void TrafficLightController::init_gpio_requests(gpiod_chip *chip) {
     gpiod_line_settings_set_direction(settings_red, GPIOD_LINE_DIRECTION_OUTPUT);
 
     gpiod_line_config *cfg_red = gpiod_line_config_new();
-    gpiod_line_config_add_line_settings(cfg_red, config.get_red_pin(), 1, settings_red);
+    gpiod_line_config_add_line_settings(cfg_red, (*config).get_red_pin(), 1, settings_red);
 
     gpiod_request_config *req_red = gpiod_request_config_new();
     gpiod_request_config_set_consumer(req_red, "gpio-timer");
@@ -28,7 +28,7 @@ void TrafficLightController::init_gpio_requests(gpiod_chip *chip) {
     gpiod_line_settings_set_direction(settings_yellow, GPIOD_LINE_DIRECTION_OUTPUT);
 
     gpiod_line_config *cfg_yellow = gpiod_line_config_new();
-    gpiod_line_config_add_line_settings(cfg_yellow, config.get_yellow_pin(), 1, settings_yellow);
+    gpiod_line_config_add_line_settings(cfg_yellow, (*config).get_yellow_pin(), 1, settings_yellow);
 
     gpiod_request_config *req_yellow = gpiod_request_config_new();
     gpiod_request_config_set_consumer(req_yellow, "gpio-timer");
@@ -40,7 +40,7 @@ void TrafficLightController::init_gpio_requests(gpiod_chip *chip) {
     gpiod_line_settings_set_direction(settings_green, GPIOD_LINE_DIRECTION_OUTPUT);
 
     gpiod_line_config *cfg_green = gpiod_line_config_new();
-    gpiod_line_config_add_line_settings(cfg_green, config.get_green_pin(), 1, settings_green);
+    gpiod_line_config_add_line_settings(cfg_green, (*config).get_green_pin(), 1, settings_green);
 
     gpiod_request_config *req_green = gpiod_request_config_new();
     gpiod_request_config_set_consumer(req_green, "gpio-timer");
@@ -48,74 +48,99 @@ void TrafficLightController::init_gpio_requests(gpiod_chip *chip) {
     request_green = gpiod_chip_request_lines(chip, req_green, cfg_green);
 }
 
+TrafficLightController::~TrafficLightController(){
+    cout << "TrafficLightController DESTRUCTOR START" << std::endl;
+    trafic_light_off();
+    release_gpiod_line_requests();
+    cout << "TrafficLightController DESTRUCTOR END" << std::endl;
+}
+
 void TrafficLightController::trafic_light_on() {
+    cout << "trafic_light_on START" << std::endl;
     *is_thread_running = true;
     while (!(*stop_thread))
     {
-        gpiod_line_request_set_value(request_red, *(config.get_red_pin()), GPIOD_LINE_VALUE_ACTIVE);
-        std::this_thread::sleep_for(std::chrono::milliseconds(config.get_red_time()));
-        gpiod_line_request_set_value(request_red, *(config.get_red_pin()), GPIOD_LINE_VALUE_INACTIVE);
-        gpiod_line_request_set_value(request_yellow, *(config.get_yellow_pin()), GPIOD_LINE_VALUE_ACTIVE);
-        std::this_thread::sleep_for(std::chrono::milliseconds(config.get_yellow_time()));
-        gpiod_line_request_set_value(request_yellow, *(config.get_yellow_pin()), GPIOD_LINE_VALUE_INACTIVE);
-        gpiod_line_request_set_value(request_green, *(config.get_green_pin()), GPIOD_LINE_VALUE_ACTIVE);
-        std::this_thread::sleep_for(std::chrono::milliseconds(config.get_green_time()));
-        gpiod_line_request_set_value(request_green, *(config.get_green_pin()), GPIOD_LINE_VALUE_INACTIVE);
+        gpiod_line_request_set_value(request_red, *((*config).get_red_pin()), GPIOD_LINE_VALUE_ACTIVE);
+        std::this_thread::sleep_for(std::chrono::milliseconds((*config).get_red_time()));
+        gpiod_line_request_set_value(request_red, *((*config).get_red_pin()), GPIOD_LINE_VALUE_INACTIVE);
+        gpiod_line_request_set_value(request_yellow, *((*config).get_yellow_pin()), GPIOD_LINE_VALUE_ACTIVE);
+        std::this_thread::sleep_for(std::chrono::milliseconds((*config).get_yellow_time()));
+        gpiod_line_request_set_value(request_yellow, *((*config).get_yellow_pin()), GPIOD_LINE_VALUE_INACTIVE);
+        gpiod_line_request_set_value(request_green, *((*config).get_green_pin()), GPIOD_LINE_VALUE_ACTIVE);
+        std::this_thread::sleep_for(std::chrono::milliseconds((*config).get_green_time()));
+        gpiod_line_request_set_value(request_green, *((*config).get_green_pin()), GPIOD_LINE_VALUE_INACTIVE);
 
-        int blinking_count = config.get_green_time_blinking() / 400;
+        int blinking_count = (*config).get_green_time_blinking() / 400;
         for (int i = 0; i <= blinking_count; i++)
         {
             std::this_thread::sleep_for(std::chrono::milliseconds(400));
-            gpiod_line_request_set_value(request_green, *(config.get_green_pin()), GPIOD_LINE_VALUE_ACTIVE);
+            gpiod_line_request_set_value(request_green, *((*config).get_green_pin()), GPIOD_LINE_VALUE_ACTIVE);
             std::this_thread::sleep_for(std::chrono::milliseconds(400));
-            gpiod_line_request_set_value(request_green, *(config.get_green_pin()), GPIOD_LINE_VALUE_INACTIVE);
+            gpiod_line_request_set_value(request_green, *((*config).get_green_pin()), GPIOD_LINE_VALUE_INACTIVE);
         }
-        gpiod_line_request_set_value(request_yellow, *(config.get_yellow_pin()), GPIOD_LINE_VALUE_ACTIVE);
+        gpiod_line_request_set_value(request_yellow, *((*config).get_yellow_pin()), GPIOD_LINE_VALUE_ACTIVE);
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-        gpiod_line_request_set_value(request_yellow, *(config.get_yellow_pin()), GPIOD_LINE_VALUE_INACTIVE);
+        gpiod_line_request_set_value(request_yellow, *((*config).get_yellow_pin()), GPIOD_LINE_VALUE_INACTIVE);
     }
     *stop_thread = false;
     *is_thread_running = false;
+    cout << "trafic_light_on END" << std::endl;
+    cout << "is_thread_running=" << boolalpha << is_thread_running->load();
+    cout << " stop_thread=" << boolalpha << stop_thread->load() << std::endl;
 }
 
 void TrafficLightController::trafic_light_off() {
-    gpiod_line_request_set_value(request_red, *(config.get_red_pin()), GPIOD_LINE_VALUE_INACTIVE);
-    gpiod_line_request_set_value(request_yellow, *(config.get_yellow_pin()), GPIOD_LINE_VALUE_INACTIVE);
-    gpiod_line_request_set_value(request_green, *(config.get_green_pin()), GPIOD_LINE_VALUE_INACTIVE);
+    cout << "trafic_light_off START" << std::endl;
+    gpiod_line_request_set_value(request_red, *((*config).get_red_pin()), GPIOD_LINE_VALUE_INACTIVE);
+    gpiod_line_request_set_value(request_yellow, *((*config).get_yellow_pin()), GPIOD_LINE_VALUE_INACTIVE);
+    gpiod_line_request_set_value(request_green, *((*config).get_green_pin()), GPIOD_LINE_VALUE_INACTIVE);
+    cout << "trafic_light_off END" << std::endl;
+    cout << "is_thread_running=" << boolalpha << is_thread_running->load();
+    cout << " stop_thread=" << boolalpha << stop_thread->load() << std::endl;
 }
 
 void TrafficLightController::trafic_light_test() {
+    cout << "trafic_light_test START" << std::endl;
     cout << "Trafic light test. Light on for 0.5 seconds one by one 3 times" << std::endl;
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
     for (int i = 0; i < 3; i++)
     {
-        gpiod_line_request_set_value(request_red, *(config.get_red_pin()), GPIOD_LINE_VALUE_ACTIVE);
+        gpiod_line_request_set_value(request_red, *((*config).get_red_pin()), GPIOD_LINE_VALUE_ACTIVE);
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
-        gpiod_line_request_set_value(request_red, *(config.get_red_pin()), GPIOD_LINE_VALUE_INACTIVE);
-        gpiod_line_request_set_value(request_yellow, *(config.get_yellow_pin()), GPIOD_LINE_VALUE_ACTIVE);
+        gpiod_line_request_set_value(request_red, *((*config).get_red_pin()), GPIOD_LINE_VALUE_INACTIVE);
+        gpiod_line_request_set_value(request_yellow, *((*config).get_yellow_pin()), GPIOD_LINE_VALUE_ACTIVE);
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
-        gpiod_line_request_set_value(request_yellow, *(config.get_yellow_pin()), GPIOD_LINE_VALUE_INACTIVE);
-        gpiod_line_request_set_value(request_green, *(config.get_green_pin()), GPIOD_LINE_VALUE_ACTIVE);
+        gpiod_line_request_set_value(request_yellow, *((*config).get_yellow_pin()), GPIOD_LINE_VALUE_INACTIVE);
+        gpiod_line_request_set_value(request_green, *((*config).get_green_pin()), GPIOD_LINE_VALUE_ACTIVE);
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
-        gpiod_line_request_set_value(request_green, *(config.get_green_pin()), GPIOD_LINE_VALUE_INACTIVE);
+        gpiod_line_request_set_value(request_green, *((*config).get_green_pin()), GPIOD_LINE_VALUE_INACTIVE);
     }
+    cout << "trafic_light_test END" << std::endl;
+    cout << "is_thread_running=" << boolalpha << is_thread_running->load();
+    cout << " stop_thread=" << boolalpha << stop_thread->load() << std::endl;
 }
 
 void TrafficLightController::trafic_light_yellow_blink() {
+    cout << "trafic_light_yellow_blink START" << std::endl;
     *is_thread_running = true;
     while (!(*stop_thread))
     {
-        gpiod_line_request_set_value(request_yellow, *(config.get_yellow_pin()), GPIOD_LINE_VALUE_ACTIVE);
-        std::this_thread::sleep_for(std::chrono::milliseconds(config.get_yellow_blinking_period()));
-        gpiod_line_request_set_value(request_yellow, *(config.get_yellow_pin()), GPIOD_LINE_VALUE_INACTIVE);
-        std::this_thread::sleep_for(std::chrono::milliseconds(config.get_yellow_blinking_period()));
+        gpiod_line_request_set_value(request_yellow, *((*config).get_yellow_pin()), GPIOD_LINE_VALUE_ACTIVE);
+        std::this_thread::sleep_for(std::chrono::milliseconds((*config).get_yellow_blinking_period()));
+        gpiod_line_request_set_value(request_yellow, *((*config).get_yellow_pin()), GPIOD_LINE_VALUE_INACTIVE);
+        std::this_thread::sleep_for(std::chrono::milliseconds((*config).get_yellow_blinking_period()));
     }
     *stop_thread = false;
     *is_thread_running = false;
+    cout << "trafic_light_yellow_blink END" << std::endl;
+    cout << "is_thread_running=" << boolalpha << is_thread_running->load();
+    cout << " stop_thread=" << boolalpha << stop_thread->load() << std::endl;
 }
 
 void TrafficLightController::release_gpiod_line_requests() {
+    cout << "release_gpiod_line_requests START" << std::endl;
     gpiod_line_request_release(request_red);
     gpiod_line_request_release(request_yellow);
     gpiod_line_request_release(request_green);
+    cout << "release_gpiod_line_requests END" << std::endl;
 }

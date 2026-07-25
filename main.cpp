@@ -37,24 +37,29 @@ void help() {
 
 void exit() {
     if (current_controller) {
-        working_thread = std::thread(&TrafficLightController::trafic_light_off, current_controller);
         if (working_thread.joinable()) {
             *stop_thread = true;
             working_thread.join();
         }
+        (*current_controller).trafic_light_off();
     }
     for(auto & pair : traffic_light_controllers) {
-        (*pair.second).release_gpiod_line_requests();
+        delete pair.second;
     }
     gpiod_chip_close(chip);
     cout << "\n    Goodbye!" << std::endl;
 }
 
 void stop_working_thread() {
+    cout << "stop_working_thread START" << std::endl;
+    cout << "is_thread_running=" << boolalpha << is_thread_running->load();
+    cout << " stop_thread=" << boolalpha << stop_thread->load() << std::endl;
     if (*is_thread_running) {
         *stop_thread = true;
         working_thread.join();
     }
+
+    cout << "stop_working_thread END" << std::endl;
 }
 
 void read_configs() {
@@ -70,7 +75,7 @@ TrafficLightController* create_controller(string instance_name, gpiod_chip* chip
     }
     for (auto& pair : traffic_light_configs) {
         if (pair.first == instance_name) {
-            TrafficLightController *controller = new TrafficLightController(pair.second, chip, is_thread_running, stop_thread);
+            TrafficLightController *controller = new TrafficLightController(&(pair.second), chip, is_thread_running, stop_thread);
             traffic_light_controllers[instance_name] = controller;
             return controller;
         }
@@ -154,7 +159,7 @@ int main() {
                 continue;
             }
             stop_working_thread();
-            working_thread = std::thread(&TrafficLightController::trafic_light_off, current_controller);
+            (*current_controller).trafic_light_off();
         } else if (command == "trlyb") {
             if(current_controller == nullptr) {
                 cout << "Error: No traffic light selected. Use 'chcnf' to select a traffic light." << std::endl;
@@ -168,7 +173,7 @@ int main() {
                 continue;
             }
             stop_working_thread();
-            working_thread = std::thread(&TrafficLightController::trafic_light_test, current_controller);
+            (*current_controller).trafic_light_test();
         } else if (command == "exit") {
             stop_working_thread();
             exit();
