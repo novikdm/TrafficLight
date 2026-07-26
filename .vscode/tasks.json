@@ -2,15 +2,22 @@
     "tasks": [
         {
             "type": "cppbuild",
-            "label": "C/C++: g++ build active file",
-            "command": "/usr/bin/g++",
+            "label": "C/C++: g++.exe build active file",
+            "command": "C:\\msys64\\ucrt64\\bin\\g++.exe",
             "args": [
                 "-fdiagnostics-color=always",
                 "-g",
-                "${file}",
-                "-lgpiod",
+                "-IC:/local/boost_1_84_0",
+                "${workspaceFolder}\\gpio_mock\\gpiod.h",
+                "${workspaceFolder}\\gpio_mock\\gpiod.cpp",
+                "${workspaceFolder}\\main.cpp",
+                "${workspaceFolder}\\lib\\config\\TrafficLightConfig.cpp",
+                "${workspaceFolder}\\lib\\config\\TrafficLightConfigMapper.cpp",
+                "${workspaceFolder}\\lib\\controller\\TrafficLightController.cpp",
+                "${workspaceFolder}\\lib\\logger\\Logger.cpp",
+                "${workspaceFolder}\\lib\\logger\\LogLevel.cpp",
                 "-o",
-                "${fileDirname}/${fileBasenameNoExtension}"
+                "${fileDirname}\\main.exe"
             ],
             "options": {
                 "cwd": "${fileDirname}"

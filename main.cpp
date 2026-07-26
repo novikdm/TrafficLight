@@ -4,204 +4,205 @@
 #include <iostream>
 #include <unistd.h>
 #include <atomic>
+#include <map>
+#include "lib/config/TrafficLightConfigMapper.h"
+#include "lib/config/TrafficLightConfig.h"
+#include "lib/controller/TrafficLightController.h"
+#include <boost/property_tree/ini_parser.hpp>
+#include "lib/logger/Logger.cpp"
 
 using namespace std;
 
-const unsigned int RED_PIN = 17;
-const unsigned int YELLOW_PIN = 27;
-const unsigned int GREEN_PIN = 22;
+string version = "v0.1.0-b01-SNAPSHOT";
+string config_file_path = "./config.ini";
+string traffic_light_config_name {"traffic_light_config_file"};
+string traffic_light_config_file_path {"./configs/traffic_light_config.json"};
+bool debug_mode = false;
 
 gpiod_chip* chip {nullptr};
-gpiod_line_request* request_red {nullptr};
-gpiod_line_request* request_yellow {nullptr};
-gpiod_line_request* request_green {nullptr};
-
+string current_traffic_light {"Default_Name"};
 std::thread working_thread;
+std::atomic<bool> *is_thread_running(nullptr);
+std::atomic<bool> *stop_thread(nullptr);
 
-std::atomic<bool> is_thread_running(false);
-std::atomic<bool> stop_thread(false);
+map<string, TrafficLightConfig> traffic_light_configs;
+map<string, TrafficLightController *> traffic_light_controllers;
+TrafficLightController *current_controller{nullptr};
 
-
-void init_gpio_requests(gpiod_chip* chip) {
-    // Request RED line
-    gpiod_line_settings* settings_red = gpiod_line_settings_new();
-    gpiod_line_settings_set_direction(settings_red, GPIOD_LINE_DIRECTION_OUTPUT);
-    
-    gpiod_line_config* cfg_red = gpiod_line_config_new();
-    gpiod_line_config_add_line_settings(cfg_red, &RED_PIN, 1, settings_red);
-    
-    gpiod_request_config* req_red = gpiod_request_config_new();
-    gpiod_request_config_set_consumer(req_red, "gpio-timer");
-    
-    request_red = gpiod_chip_request_lines(chip, req_red, cfg_red);
-    
-    // Request YELLOW line
-    gpiod_line_settings* settings_yellow = gpiod_line_settings_new();
-    gpiod_line_settings_set_direction(settings_yellow, GPIOD_LINE_DIRECTION_OUTPUT);
-
-    gpiod_line_config* cfg_yellow = gpiod_line_config_new();
-    gpiod_line_config_add_line_settings(cfg_yellow, &YELLOW_PIN, 1, settings_yellow);
-    
-    gpiod_request_config* req_yellow = gpiod_request_config_new();
-    gpiod_request_config_set_consumer(req_yellow, "gpio-timer");
-
-    request_yellow = gpiod_chip_request_lines(chip, req_yellow, cfg_yellow);
-
-     // Request GREEEN line
-     gpiod_line_settings* settings_green = gpiod_line_settings_new();
-    gpiod_line_settings_set_direction(settings_green, GPIOD_LINE_DIRECTION_OUTPUT);
-    
-    gpiod_line_config* cfg_green = gpiod_line_config_new();
-    gpiod_line_config_add_line_settings(cfg_green, &GREEN_PIN, 1, settings_green);
-    
-    gpiod_request_config* req_green = gpiod_request_config_new();
-    gpiod_request_config_set_consumer(req_green, "gpio-timer");
-    
-    request_green = gpiod_chip_request_lines(chip, req_green, cfg_green);
-}
-
-void trafic_light_on() {
-    is_thread_running = true;
-    while(!stop_thread) {
-        gpiod_line_request_set_value(request_red, RED_PIN, GPIOD_LINE_VALUE_ACTIVE);
-        std::this_thread::sleep_for(std::chrono::milliseconds(7000));
-        gpiod_line_request_set_value(request_red, RED_PIN, GPIOD_LINE_VALUE_INACTIVE);
-        gpiod_line_request_set_value(request_yellow, YELLOW_PIN, GPIOD_LINE_VALUE_ACTIVE);
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-        gpiod_line_request_set_value(request_yellow, YELLOW_PIN, GPIOD_LINE_VALUE_INACTIVE);
-        gpiod_line_request_set_value(request_green, GREEN_PIN, GPIOD_LINE_VALUE_ACTIVE);
-        std::this_thread::sleep_for(std::chrono::milliseconds(13000));
-        gpiod_line_request_set_value(request_green, GREEN_PIN, GPIOD_LINE_VALUE_INACTIVE);
-        for(int i = 0; i < 4; i++) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(400));
-            gpiod_line_request_set_value(request_green, GREEN_PIN, GPIOD_LINE_VALUE_ACTIVE);
-            std::this_thread::sleep_for(std::chrono::milliseconds(400));
-            gpiod_line_request_set_value(request_green, GREEN_PIN, GPIOD_LINE_VALUE_INACTIVE);
-        }
-        gpiod_line_request_set_value(request_yellow, YELLOW_PIN, GPIOD_LINE_VALUE_ACTIVE);
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-        gpiod_line_request_set_value(request_yellow, YELLOW_PIN, GPIOD_LINE_VALUE_INACTIVE);
-    }
-    stop_thread = false;
-    is_thread_running = false;
-}
-
-void trafic_light_off() {
-    gpiod_line_request_set_value(request_red, RED_PIN, GPIOD_LINE_VALUE_INACTIVE);
-    gpiod_line_request_set_value(request_yellow, YELLOW_PIN, GPIOD_LINE_VALUE_INACTIVE);
-    gpiod_line_request_set_value(request_green, GREEN_PIN, GPIOD_LINE_VALUE_INACTIVE);
-}
-
-void trafic_light_test() {
-    cout << "Trafic light test. Light on for 0.5 seconds one by one 3 times" << std::endl;
-    std::this_thread::sleep_for(std::chrono::milliseconds(200));
-    for(int i = 0; i < 3; i++){
-        gpiod_line_request_set_value(request_red, RED_PIN, GPIOD_LINE_VALUE_ACTIVE);
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
-        gpiod_line_request_set_value(request_red, RED_PIN, GPIOD_LINE_VALUE_INACTIVE);
-        gpiod_line_request_set_value(request_yellow, YELLOW_PIN, GPIOD_LINE_VALUE_ACTIVE);
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
-        gpiod_line_request_set_value(request_yellow, YELLOW_PIN, GPIOD_LINE_VALUE_INACTIVE);
-        gpiod_line_request_set_value(request_green, GREEN_PIN, GPIOD_LINE_VALUE_ACTIVE);
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
-        gpiod_line_request_set_value(request_green, GREEN_PIN, GPIOD_LINE_VALUE_INACTIVE);
-    }
-}
-
-void trafic_light_yellow_blink() {
-    is_thread_running = true;
-    while(!stop_thread) {
-        gpiod_line_request_set_value(request_yellow, YELLOW_PIN, GPIOD_LINE_VALUE_ACTIVE);
-        std::this_thread::sleep_for(std::chrono::milliseconds(400));
-        gpiod_line_request_set_value(request_yellow, YELLOW_PIN, GPIOD_LINE_VALUE_INACTIVE);
-        std::this_thread::sleep_for(std::chrono::milliseconds(400));
-    }
-    stop_thread = false;
-    is_thread_running = false;
-}
 
 void help() {
-    cout << "   Available commands:\n" << std::endl;
-    cout << "help : print instructions" << std::endl;
-    cout << "trlon : enable trafic light mode" << std::endl;
-    cout << "trloff : disable all lights" << std::endl;
-    cout << "trlyb : enable only yellow light in blinking mode" << std::endl;
-    cout << "trltest : test trafic light - lights should blink one by one for a short period of time" << std::endl;
-    cout << "exit : exit program" << std::endl;
-    cout << "!!! NOTE: all commands case sensitive !!!" << std::endl;
+    Logger::logInfo( "   Available commands:\n");
+    Logger::logInfo("help : print instructions");
+    Logger::logInfo("rcnf : reload configs");
+    Logger::logInfo("chcnf: choose traffic light config");
+    Logger::logInfo("trlon : enable trafic light mode");
+    Logger::logInfo("trloff : disable all lights");
+    Logger::logInfo("trlyb : enable only yellow light in blinking mode");
+    Logger::logInfo("trltest : test trafic light - lights should blink one by one for a short period of time");
+    Logger::logInfo("exit : exit program");
+    Logger::logInfo("!!! NOTE: all commands case sensitive !!!");
 }
 
 void exit() {
-    trafic_light_off();
-    if (working_thread.joinable()) {
-        stop_thread = true;
-        working_thread.join();
+    if (current_controller) {
+        if (working_thread.joinable()) {
+            *stop_thread = true;
+            working_thread.join();
+        }
+        (*current_controller).trafic_light_off();
     }
-    gpiod_line_request_release(request_red);
-    gpiod_line_request_release(request_yellow);
-    gpiod_line_request_release(request_green);
+    for(auto & pair : traffic_light_controllers) {
+        delete pair.second;
+    }
     gpiod_chip_close(chip);
-    cout << "\n    Goodbye!" << std::endl;
+    Logger::logInfo("\n-------------------------Goodbye!------------------------");
 }
 
 void stop_working_thread() {
-    if (is_thread_running) {
-        stop_thread = true;
+    Logger::logDebug(debug_mode, "stop_working_thread START");
+    Logger::logDebug(debug_mode, "is_thread_running=" + to_string(is_thread_running->load()));
+    Logger::logDebug(debug_mode, "stop_thread="  + to_string(stop_thread->load()));
+
+    if (*is_thread_running) {
+        *stop_thread = true;
         working_thread.join();
     }
+
+    Logger::logDebug(debug_mode, "stop_working_thread END");
+}
+
+void read_configs() {
+    try {
+        pt::ptree tree;
+        pt::read_ini(config_file_path, tree);
+        version = tree.get<string>("version");
+        debug_mode = tree.get<bool>("debug_mode");
+        traffic_light_config_file_path = tree.get<string>(traffic_light_config_name);
+    } catch (const std::exception& e) {
+        Logger::logError("\nError reading base config file: ");
+        Logger::logError( e.what());
+    }
+
+    TrafficLightConfigMapper *mapper = new TrafficLightConfigMapper(traffic_light_config_file_path);
+    for(const auto& item : mapper->map_all_from_file()) {
+        traffic_light_configs[item.first] = item.second;
+    }
+    delete mapper;
+}
+
+TrafficLightController* create_controller(string instance_name, gpiod_chip* chip) {
+    if(traffic_light_configs.size() == 0) {
+        Logger::logError("Configs not found try reload configs!!!");
+    }
+    for (auto& pair : traffic_light_configs) {
+        if (pair.first == instance_name) {
+            TrafficLightController *controller = new TrafficLightController(&(pair.second), debug_mode, chip, is_thread_running, stop_thread);
+            traffic_light_controllers[instance_name] = controller;
+            return controller;
+        }
+    }
+    Logger::logError("Error: Traffic light config not found for instance name: " + instance_name);
+    return nullptr;
 }
 
 int main() {
-    cout << "\n################### Welcome to Trafic Light Simulator! ###################\n################### Version: v0.0.1 ###################\n" << std::endl;
+    cout << "Initialization"<< std::flush;
+    is_thread_running = new std::atomic<bool>(false);
+    stop_thread = new std::atomic<bool>(false);
+    for (int i = 0; i < 5; i++) {
+        cout << "." << std::flush;
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    }
+
+    cout << "\nRead configs"<< std::flush;
+    for (int i = 0; i < 5; i++) {
+        cout << "." << std::flush;
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    }
+    read_configs();
+
+    Logger::logInfo("\n" );
+    Logger::logInfo("\n################### Welcome to Trafic Light Simulator! ###################\n################### Version: " + version + " ###################\n");
+
+
     
     // Open GPIO chip
     chip = gpiod_chip_open("/dev/gpiochip0");
     if (!chip) {
-        cout << "Error: Unable to open GPIO chip: " << "/dev/gpiochip0" << std::endl;
-        return 1;
-    }
-
-    init_gpio_requests(chip);
-
-    if (!request_red || !request_yellow || !request_green) {
-        cout << "Error: gpiod_chip_request_lines" << std::endl;
-        gpiod_chip_close(chip);
+        Logger::logError("Error: Unable to open GPIO chip: ");
+        Logger::logError(std::string("/dev/gpiochip0"));
         return 1;
     }
 
     help();
 
-    string input;
+    string command;
+    string parameter;
 
     do {
-        input = "";
-        cout << "\nCommand: ";
-        cin >> input;
-        cout << std::endl;
+        command = "";
+        Logger::logInfo("\nCommand: ");
+        cin >> command;
+        Logger::logInfo("");
 
-        if (input == "help") {
+        if (command == "help") {
             help();
-        } else if (input == "trlon") {
+        } else if (command == "rcnf") {
+            read_configs();
+        } else if (command == "chcnf") {
+            parameter = "";
+            Logger::logInfo("\nEnter config name: ");
+            cin >> parameter;
+            Logger::logInfo("");
+            if(parameter == "" || parameter == " ") {
+                Logger::logError("Name is empty");
+            }
+            if(parameter != current_traffic_light) {
+                current_traffic_light = parameter;
+                current_controller = create_controller(current_traffic_light, chip);
+                if(current_controller == nullptr) {
+                    Logger::logError("No traffic light selected. Use 'chcnf' to select a traffic light.");
+                    continue;
+                }
+                Logger::logInfo("New traffic light selected: " + current_traffic_light);
+            } else {
+                Logger::logInfo("Traffic light already selected: " + current_traffic_light);
+            }
+        } else if (command == "trlon") {
+            if(current_controller == nullptr) {
+                Logger::logError("No traffic light selected. Use 'chcnf' to select a traffic light.");
+                continue;
+            }
             stop_working_thread();
-            working_thread = std::thread(trafic_light_on);
-        } else if (input == "trloff") {
+            working_thread = std::thread(&TrafficLightController::trafic_light_on, current_controller);
+        } else if (command == "trloff") {
+            if(current_controller == nullptr) {
+                Logger::logError("No traffic light selected. Use 'chcnf' to select a traffic light.");
+                continue;
+            }
             stop_working_thread();
-            trafic_light_off();
-        } else if (input == "trlyb") {
+            (*current_controller).trafic_light_off();
+        } else if (command == "trlyb") {
+            if(current_controller == nullptr) {
+                Logger::logError("No traffic light selected. Use 'chcnf' to select a traffic light.");
+                continue;
+            }
             stop_working_thread();
-            working_thread = std::thread(trafic_light_yellow_blink);
-        } else if (input == "trltest") {
+            working_thread = std::thread(&TrafficLightController::trafic_light_yellow_blink, current_controller);
+        } else if (command == "trltest") {
+            if(current_controller == nullptr) {
+                Logger::logError("No traffic light selected. Use 'chcnf' to select a traffic light.");
+                continue;
+            }
             stop_working_thread();
-            trafic_light_test();
-        } else if (input == "exit") {
+            (*current_controller).trafic_light_test();
+        } else if (command == "exit") {
             stop_working_thread();
             exit();
         } else {
-            cout << "\nError! Invalid command. \nEnter help to see valid commands."  << std::endl;
+            Logger::logError("Invalid command. \nEnter help to see valid commands.");
         }
-
-
-    } while(input != "exit");
+    } while(command != "exit");
 
     return 0;
 }

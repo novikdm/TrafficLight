@@ -1,0 +1,26 @@
+{
+    "TrafficLight_1": {
+        "id": "0",
+        "name": "TrafficLight_1",
+        "red_pin": "17",
+        "yellow_pin": "27",
+        "green_pin": "22",
+        "red_time": "7000",
+        "yellow_time": "1000",
+        "green_time": "13000",
+        "green_time_blinking": "2000",
+        "yellow_blinking_period": "400"
+    },
+    "TrafficLight_2": {
+        "id": "1",
+        "name": "TrafficLight_2",
+        "red_pin": "17",
+        "yellow_pin": "27",
+        "green_pin": "22",
+        "red_time": "7000",
+        "yellow_time": "1000",
+        "green_time": "13000",
+        "green_time_blinking": "2000",
+        "yellow_blinking_period": "2000"
+    }
+}
