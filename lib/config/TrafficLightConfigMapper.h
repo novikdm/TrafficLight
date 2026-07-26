@@ -20,6 +20,7 @@ class TrafficLightConfigMapper {
         pt::ptree tl_config_instance_to_json(const TrafficLightConfig& cfg);
     public:
         TrafficLightConfigMapper();
+        TrafficLightConfigMapper(const string& base_config_file_path);
         ~TrafficLightConfigMapper();
         map<string, TrafficLightConfig> map_all_from_file();
         TrafficLightConfig map_to_object(const string &instance_name);

@@ -5,8 +5,9 @@
 #include <iostream>
 #include <unistd.h>
 #include <atomic>
+#include "../logger/Logger.cpp"
 
-TrafficLightController::TrafficLightController(TrafficLightConfig *config, gpiod_chip *chip, std::atomic<bool> *is_thread_running, std::atomic<bool> *stop_thread) : config(config), chip(chip), is_thread_running(is_thread_running), stop_thread(stop_thread) {
+TrafficLightController::TrafficLightController(TrafficLightConfig *config, bool debug_mode, gpiod_chip *chip, std::atomic<bool> *is_thread_running, std::atomic<bool> *stop_thread) : config(config), chip(chip), is_thread_running(is_thread_running), stop_thread(stop_thread), debug_mode(debug_mode) {
     init_gpio_requests(chip);
 }
 
@@ -49,14 +50,15 @@ void TrafficLightController::init_gpio_requests(gpiod_chip *chip) {
 }
 
 TrafficLightController::~TrafficLightController(){
-    cout << "TrafficLightController DESTRUCTOR START" << std::endl;
+    Logger::logDebug(debug_mode, "TrafficLightController DESTRUCTOR START");
     trafic_light_off();
     release_gpiod_line_requests();
-    cout << "TrafficLightController DESTRUCTOR END" << std::endl;
+    Logger::logDebug(debug_mode, "TrafficLightController DESTRUCTOR END");
 }
 
 void TrafficLightController::trafic_light_on() {
-    cout << "trafic_light_on START" << std::endl;
+    Logger::logDebug(debug_mode, "trafic_light_on START");
+
     *is_thread_running = true;
     while (!(*stop_thread))
     {
@@ -84,24 +86,28 @@ void TrafficLightController::trafic_light_on() {
     }
     *stop_thread = false;
     *is_thread_running = false;
-    cout << "trafic_light_on END" << std::endl;
-    cout << "is_thread_running=" << boolalpha << is_thread_running->load();
-    cout << " stop_thread=" << boolalpha << stop_thread->load() << std::endl;
+
+    Logger::logDebug(debug_mode, "trafic_light_on END");
+    Logger::logDebug(debug_mode, "is_thread_running=" + std::to_string(is_thread_running->load()));
+    Logger::logDebug(debug_mode, "stop_thread=" + std::to_string(stop_thread->load()));
 }
 
 void TrafficLightController::trafic_light_off() {
-    cout << "trafic_light_off START" << std::endl;
+    Logger::logDebug(debug_mode, "trafic_light_off START");
+
     gpiod_line_request_set_value(request_red, *((*config).get_red_pin()), GPIOD_LINE_VALUE_INACTIVE);
     gpiod_line_request_set_value(request_yellow, *((*config).get_yellow_pin()), GPIOD_LINE_VALUE_INACTIVE);
     gpiod_line_request_set_value(request_green, *((*config).get_green_pin()), GPIOD_LINE_VALUE_INACTIVE);
-    cout << "trafic_light_off END" << std::endl;
-    cout << "is_thread_running=" << boolalpha << is_thread_running->load();
-    cout << " stop_thread=" << boolalpha << stop_thread->load() << std::endl;
+
+    Logger::logDebug(debug_mode, "trafic_light_off END");
+    Logger::logDebug(debug_mode, "is_thread_running=" + std::to_string(is_thread_running->load()));
+    Logger::logDebug(debug_mode, "stop_thread=" + std::to_string(stop_thread->load()));
 }
 
 void TrafficLightController::trafic_light_test() {
-    cout << "trafic_light_test START" << std::endl;
-    cout << "Trafic light test. Light on for 0.5 seconds one by one 3 times" << std::endl;
+    Logger::logDebug(debug_mode, "trafic_light_test START");
+    Logger::logDebug(debug_mode, "Trafic light test. Light on for 0.5 seconds one by one 3 times");
+
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
     for (int i = 0; i < 3; i++)
     {
@@ -115,13 +121,15 @@ void TrafficLightController::trafic_light_test() {
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
         gpiod_line_request_set_value(request_green, *((*config).get_green_pin()), GPIOD_LINE_VALUE_INACTIVE);
     }
-    cout << "trafic_light_test END" << std::endl;
-    cout << "is_thread_running=" << boolalpha << is_thread_running->load();
-    cout << " stop_thread=" << boolalpha << stop_thread->load() << std::endl;
+
+    Logger::logDebug(debug_mode, "trafic_light_test END");
+    Logger::logDebug(debug_mode, "is_thread_running=" + std::to_string(is_thread_running->load()));
+    Logger::logDebug(debug_mode, "stop_thread=" + std::to_string(stop_thread->load()));
 }
 
 void TrafficLightController::trafic_light_yellow_blink() {
-    cout << "trafic_light_yellow_blink START" << std::endl;
+    Logger::logDebug(debug_mode, "trafic_light_yellow_blink START");
+
     *is_thread_running = true;
     while (!(*stop_thread))
     {
@@ -132,15 +140,18 @@ void TrafficLightController::trafic_light_yellow_blink() {
     }
     *stop_thread = false;
     *is_thread_running = false;
-    cout << "trafic_light_yellow_blink END" << std::endl;
-    cout << "is_thread_running=" << boolalpha << is_thread_running->load();
-    cout << " stop_thread=" << boolalpha << stop_thread->load() << std::endl;
+
+    Logger::logDebug(debug_mode, "trafic_light_yellow_blink END");
+    Logger::logDebug(debug_mode, "is_thread_running=" + std::to_string(is_thread_running->load()));
+    Logger::logDebug(debug_mode, "stop_thread=" + std::to_string(stop_thread->load()));
 }
 
 void TrafficLightController::release_gpiod_line_requests() {
-    cout << "release_gpiod_line_requests START" << std::endl;
+    Logger::logDebug(debug_mode, "release_gpiod_line_requests START");
+
     gpiod_line_request_release(request_red);
     gpiod_line_request_release(request_yellow);
     gpiod_line_request_release(request_green);
-    cout << "release_gpiod_line_requests END" << std::endl;
+    
+    Logger::logDebug(debug_mode, "release_gpiod_line_requests END");
 }

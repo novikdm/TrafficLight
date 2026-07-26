@@ -7,6 +7,7 @@
 
 class TrafficLightController {
     private:
+        bool debug_mode {false};
         TrafficLightConfig *config;
         gpiod_chip* chip {nullptr};
         gpiod_line_request* request_red {nullptr};
@@ -19,7 +20,7 @@ class TrafficLightController {
 
 
     public:
-        TrafficLightController(TrafficLightConfig *config, gpiod_chip* chip, std::atomic<bool> *is_thread_running, std::atomic<bool> *stop_thread);
+        TrafficLightController(TrafficLightConfig *config, bool debug_mode, gpiod_chip* chip, std::atomic<bool> *is_thread_running, std::atomic<bool> *stop_thread);
         ~TrafficLightController();
         void trafic_light_on();
         void trafic_light_off();

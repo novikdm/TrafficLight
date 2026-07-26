@@ -10,6 +10,10 @@ TrafficLightConfigMapper::TrafficLightConfigMapper() {
     read_config_from_base_config_file(base_config_file_path);
 }
 
+TrafficLightConfigMapper::TrafficLightConfigMapper(const string& traffic_light_config_file_path) {
+    config_file_path = traffic_light_config_file_path;
+}
+
 TrafficLightConfigMapper::~TrafficLightConfigMapper() {
 
 }

@@ -8,8 +8,16 @@
 #include "lib/config/TrafficLightConfigMapper.h"
 #include "lib/config/TrafficLightConfig.h"
 #include "lib/controller/TrafficLightController.h"
+#include <boost/property_tree/ini_parser.hpp>
+#include "lib/logger/Logger.cpp"
 
 using namespace std;
+
+string version = "v0.1.0-b01-SNAPSHOT";
+string config_file_path = "./config.ini";
+string traffic_light_config_name {"traffic_light_config_file"};
+string traffic_light_config_file_path {"./configs/traffic_light_config.json"};
+bool debug_mode = false;
 
 gpiod_chip* chip {nullptr};
 string current_traffic_light {"Default_Name"};
@@ -23,16 +31,16 @@ TrafficLightController *current_controller{nullptr};
 
 
 void help() {
-    cout << "   Available commands:\n" << std::endl;
-    cout << "help : print instructions" << std::endl;
-    cout << "rcnf : reload configs" << std::endl;
-    cout << "chcnf: choose traffic light config" << std::endl;
-    cout << "trlon : enable trafic light mode" << std::endl;
-    cout << "trloff : disable all lights" << std::endl;
-    cout << "trlyb : enable only yellow light in blinking mode" << std::endl;
-    cout << "trltest : test trafic light - lights should blink one by one for a short period of time" << std::endl;
-    cout << "exit : exit program" << std::endl;
-    cout << "!!! NOTE: all commands case sensitive !!!" << std::endl;
+    Logger::logInfo( "   Available commands:\n");
+    Logger::logInfo("help : print instructions");
+    Logger::logInfo("rcnf : reload configs");
+    Logger::logInfo("chcnf: choose traffic light config");
+    Logger::logInfo("trlon : enable trafic light mode");
+    Logger::logInfo("trloff : disable all lights");
+    Logger::logInfo("trlyb : enable only yellow light in blinking mode");
+    Logger::logInfo("trltest : test trafic light - lights should blink one by one for a short period of time");
+    Logger::logInfo("exit : exit program");
+    Logger::logInfo("!!! NOTE: all commands case sensitive !!!");
 }
 
 void exit() {
@@ -47,40 +55,53 @@ void exit() {
         delete pair.second;
     }
     gpiod_chip_close(chip);
-    cout << "\n    Goodbye!" << std::endl;
+    Logger::logInfo("\n-------------------------Goodbye!------------------------");
 }
 
 void stop_working_thread() {
-    cout << "stop_working_thread START" << std::endl;
-    cout << "is_thread_running=" << boolalpha << is_thread_running->load();
-    cout << " stop_thread=" << boolalpha << stop_thread->load() << std::endl;
+    Logger::logDebug(debug_mode, "stop_working_thread START");
+    Logger::logDebug(debug_mode, "is_thread_running=" + to_string(is_thread_running->load()));
+    Logger::logDebug(debug_mode, "stop_thread="  + to_string(stop_thread->load()));
+
     if (*is_thread_running) {
         *stop_thread = true;
         working_thread.join();
     }
 
-    cout << "stop_working_thread END" << std::endl;
+    Logger::logDebug(debug_mode, "stop_working_thread END");
 }
 
 void read_configs() {
-    TrafficLightConfigMapper mapper;
-    for(const auto& item : mapper.map_all_from_file()) {
+    try {
+        pt::ptree tree;
+        pt::read_ini(config_file_path, tree);
+        version = tree.get<string>("version");
+        debug_mode = tree.get<bool>("debug_mode");
+        traffic_light_config_file_path = tree.get<string>(traffic_light_config_name);
+    } catch (const std::exception& e) {
+        Logger::logError("\nError reading base config file: ");
+        Logger::logError( e.what());
+    }
+
+    TrafficLightConfigMapper *mapper = new TrafficLightConfigMapper(traffic_light_config_file_path);
+    for(const auto& item : mapper->map_all_from_file()) {
         traffic_light_configs[item.first] = item.second;
     }
+    delete mapper;
 }
 
 TrafficLightController* create_controller(string instance_name, gpiod_chip* chip) {
     if(traffic_light_configs.size() == 0) {
-        std::cerr << "Configs not found try reload configs!!!" << std::endl;
+        Logger::logError("Configs not found try reload configs!!!");
     }
     for (auto& pair : traffic_light_configs) {
         if (pair.first == instance_name) {
-            TrafficLightController *controller = new TrafficLightController(&(pair.second), chip, is_thread_running, stop_thread);
+            TrafficLightController *controller = new TrafficLightController(&(pair.second), debug_mode, chip, is_thread_running, stop_thread);
             traffic_light_controllers[instance_name] = controller;
             return controller;
         }
     }
-    std::cerr << "Error: Traffic light config not found for instance name: " << instance_name << std::endl;
+    Logger::logError("Error: Traffic light config not found for instance name: " + instance_name);
     return nullptr;
 }
 
@@ -100,15 +121,16 @@ int main() {
     }
     read_configs();
 
-    cout << "\n" << std::endl;
-    cout << "\n################### Welcome to Trafic Light Simulator! ###################\n################### Version: v0.1.0-b01-SNAPSHOT ###################\n" << std::endl;
+    Logger::logInfo("\n" );
+    Logger::logInfo("\n################### Welcome to Trafic Light Simulator! ###################\n################### Version: " + version + " ###################\n");
 
 
-
+    
     // Open GPIO chip
     chip = gpiod_chip_open("/dev/gpiochip0");
     if (!chip) {
-        cout << "Error: Unable to open GPIO chip: " << "/dev/gpiochip0" << std::endl;
+        Logger::logError("Error: Unable to open GPIO chip: ");
+        Logger::logError(std::string("/dev/gpiochip0"));
         return 1;
     }
 
@@ -119,9 +141,9 @@ int main() {
 
     do {
         command = "";
-        cout << "\nCommand: ";
+        Logger::logInfo("\nCommand: ");
         cin >> command;
-        cout << std::endl;
+        Logger::logInfo("");
 
         if (command == "help") {
             help();
@@ -129,47 +151,47 @@ int main() {
             read_configs();
         } else if (command == "chcnf") {
             parameter = "";
-            cout << "\nEnter config name: ";
+            Logger::logInfo("\nEnter config name: ");
             cin >> parameter;
-            cout << std::endl;
+            Logger::logInfo("");
             if(parameter == "" || parameter == " ") {
-                cout << "Error: name is empty" << std::endl;
+                Logger::logError("Name is empty");
             }
             if(parameter != current_traffic_light) {
                 current_traffic_light = parameter;
                 current_controller = create_controller(current_traffic_light, chip);
                 if(current_controller == nullptr) {
-                    cout << "Error: No traffic light selected. Use 'chcnf' to select a traffic light." << std::endl;
+                    Logger::logError("No traffic light selected. Use 'chcnf' to select a traffic light.");
                     continue;
                 }
-                cout << "New traffic light selected: " << current_traffic_light << std::endl;
+                Logger::logInfo("New traffic light selected: " + current_traffic_light);
             } else {
-                cout << "Traffic light already selected: " << current_traffic_light << std::endl;
+                Logger::logInfo("Traffic light already selected: " + current_traffic_light);
             }
         } else if (command == "trlon") {
             if(current_controller == nullptr) {
-                cout << "Error: No traffic light selected. Use 'chcnf' to select a traffic light." << std::endl;
+                Logger::logError("No traffic light selected. Use 'chcnf' to select a traffic light.");
                 continue;
             }
             stop_working_thread();
             working_thread = std::thread(&TrafficLightController::trafic_light_on, current_controller);
         } else if (command == "trloff") {
             if(current_controller == nullptr) {
-                cout << "Error: No traffic light selected. Use 'chcnf' to select a traffic light." << std::endl;
+                Logger::logError("No traffic light selected. Use 'chcnf' to select a traffic light.");
                 continue;
             }
             stop_working_thread();
             (*current_controller).trafic_light_off();
         } else if (command == "trlyb") {
             if(current_controller == nullptr) {
-                cout << "Error: No traffic light selected. Use 'chcnf' to select a traffic light." << std::endl;
+                Logger::logError("No traffic light selected. Use 'chcnf' to select a traffic light.");
                 continue;
             }
             stop_working_thread();
             working_thread = std::thread(&TrafficLightController::trafic_light_yellow_blink, current_controller);
         } else if (command == "trltest") {
             if(current_controller == nullptr) {
-                cout << "Error: No traffic light selected. Use 'chcnfch' to select a traffic light." << std::endl;
+                Logger::logError("No traffic light selected. Use 'chcnf' to select a traffic light.");
                 continue;
             }
             stop_working_thread();
@@ -178,7 +200,7 @@ int main() {
             stop_working_thread();
             exit();
         } else {
-            cout << "\nError! Invalid command. \nEnter help to see valid commands."  << std::endl;
+            Logger::logError("Invalid command. \nEnter help to see valid commands.");
         }
     } while(command != "exit");
 
