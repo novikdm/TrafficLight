@@ -55,9 +55,11 @@ pt::ptree TrafficLightConfigMapper::tl_config_instance_to_json(const TrafficLigh
 
     tree.put("id", cfg.get_traffic_light_id());
     tree.put("name", cfg.get_traffic_light_name());
+    tree.put("address", cfg.get_traffic_light_address());
     tree.put("red_pin", cfg.get_red_pin());
     tree.put("yellow_pin", cfg.get_yellow_pin());
     tree.put("green_pin", cfg.get_green_pin());
+    tree.put("start_delay", cfg.get_start_delay());
     tree.put("red_time", cfg.get_red_time());
     tree.put("yellow_time", cfg.get_yellow_time());
     tree.put("green_time", cfg.get_green_time());
@@ -110,9 +112,11 @@ TrafficLightConfig TrafficLightConfigMapper::map_from_ptree_to_object(const pt::
     TrafficLightConfig config;
     config.set_traffic_light_id(instanse.get<int>("id"));
     config.set_traffic_light_name(instanse.get<std::string>("name"));
+    config.set_traffic_light_address(instanse.get<std::string>("address"));
     config.set_red_pin(instanse.get<int>("red_pin"));
     config.set_green_pin(instanse.get<int>("green_pin"));
     config.set_yellow_pin(instanse.get<int>("yellow_pin"));
+    config.set_start_delay(instanse.get<int>("start_delay"));
     config.set_red_time(instanse.get<int>("red_time"));
     config.set_yellow_time(instanse.get<int>("yellow_time"));
     config.set_green_time(instanse.get<int>("green_time"));

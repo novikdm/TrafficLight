@@ -1,26 +1,30 @@
 {
-    "TrafficLight_1": {
+    "TL-000000": {
         "id": "0",
-        "name": "TrafficLight_1",
+        "name": "TL-000000",
+        "address": "GPIO",
         "red_pin": "17",
         "yellow_pin": "27",
         "green_pin": "22",
-        "red_time": "7000",
-        "yellow_time": "1000",
-        "green_time": "13000",
-        "green_time_blinking": "2000",
+        "start_delay": "0",
+        "red_time": "20000",
+        "yellow_time": "2000",
+        "green_time": "20000",
+        "green_time_blinking": "500",
         "yellow_blinking_period": "400"
     },
-    "TrafficLight_2": {
+    "TL-000001": {
         "id": "1",
-        "name": "TrafficLight_2",
+        "name": "TL-000001",
+        "address": "192.168.1.13",
         "red_pin": "17",
         "yellow_pin": "27",
         "green_pin": "22",
-        "red_time": "7000",
-        "yellow_time": "1000",
-        "green_time": "13000",
-        "green_time_blinking": "2000",
-        "yellow_blinking_period": "2000"
+        "start_delay": "0",
+        "red_time": "20000",
+        "yellow_time": "2000",
+        "green_time": "20000",
+        "green_time_blinking": "500",
+        "yellow_blinking_period": "400"
     }
 }

@@ -8,6 +8,7 @@
 class TrafficLightController {
     private:
         bool debug_mode {false};
+        bool is_local {true};
         TrafficLightConfig *config;
         gpiod_chip* chip {nullptr};
         gpiod_line_request* request_red {nullptr};
@@ -17,6 +18,17 @@ class TrafficLightController {
         std::atomic<bool> *stop_thread {nullptr};
 
         void init_gpio_requests(gpiod_chip* chip);
+        void release_gpiod_line_requests();
+
+        void tl_on_local();
+        void tl_off_local();
+        void tl_test_local();
+        void tl_yellow_blink_local();
+        
+        void tl_on_external();
+        void tl_off_external();
+        void tl_test_external();
+        void tl_yellow_blink_external();
 
 
     public:

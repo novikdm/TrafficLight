@@ -6,9 +6,11 @@ using namespace std;
 TrafficLightConfig::TrafficLightConfig() 
     : traffic_light_id {0}, 
     traffic_light_name {"Default Traffic Light"},
+    traffic_light_address {"local"},
     red_pin {new unsigned int(17)},
     yellow_pin {new unsigned int(27)},
     green_pin {new unsigned int(22)},
+    start_delay {0},
     red_time {7000},
     yellow_time {1000},
     green_time {13000},
@@ -45,6 +47,7 @@ void TrafficLightConfig::initialization(string config_file_path) {
 // Getterrs
 int TrafficLightConfig::get_traffic_light_id() const { return traffic_light_id; }
 string TrafficLightConfig::get_traffic_light_name() const { return traffic_light_name; }
+string TrafficLightConfig::get_traffic_light_address() const { return traffic_light_address; }
 unsigned int *TrafficLightConfig::get_red_pin() const { return red_pin; }
 unsigned int *TrafficLightConfig::get_yellow_pin() const { return yellow_pin; }
 unsigned int *TrafficLightConfig::get_green_pin() const { return green_pin; }
@@ -57,6 +60,7 @@ int TrafficLightConfig::get_yellow_blinking_period() const { return yellow_blink
 // Setters
 void TrafficLightConfig::set_traffic_light_id(int id){traffic_light_id = id;}
 void TrafficLightConfig::set_traffic_light_name(string instance_name){traffic_light_name = instance_name;}
+void TrafficLightConfig::set_traffic_light_address(string address){traffic_light_address = address;}
 void TrafficLightConfig::set_red_pin(const int red) { red_pin = new unsigned int(red); }
 void TrafficLightConfig::set_yellow_pin(const int yellow) { yellow_pin = new unsigned int(yellow); }
 void TrafficLightConfig::set_green_pin(const int green) { green_pin = new unsigned int(green); }
