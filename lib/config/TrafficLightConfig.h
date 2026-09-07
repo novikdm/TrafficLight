@@ -4,10 +4,15 @@
 using namespace std;
 
 class TrafficLightConfig {
+
     private:
         int traffic_light_id; // unique identifier for the traffic light configuration
         string traffic_light_name; // unique name for the traffic light configuration instance
         string traffic_light_address; // address for the traffic light configuration instance
+        string tlon_endpoint;
+        string tloff_endpoint;
+        string tlt_endpoint;
+        string tlyb_endpoint;
         unsigned int *red_pin {nullptr}; // GPIO pin number for the red light
         unsigned int *yellow_pin {nullptr}; // GPIO pin number for the yellow light
         unsigned int *green_pin {nullptr}; // GPIO pin number for the green light
@@ -17,8 +22,8 @@ class TrafficLightConfig {
         int green_time;
         int green_time_blinking;
         int yellow_blinking_period;
-    public:
 
+    public:
         TrafficLightConfig();
         TrafficLightConfig(string config_file_path);
         TrafficLightConfig(const TrafficLightConfig &source);
@@ -29,6 +34,11 @@ class TrafficLightConfig {
         int get_traffic_light_id() const;
         string get_traffic_light_name() const;
         string get_traffic_light_address() const;
+        string get_tlon_endpoint() const;
+        string get_tloff_endpoint() const;
+        string get_tlt_endpoint() const;
+        string get_tlyb_endpoint() const;
+
         unsigned int *get_red_pin() const;
         unsigned int *get_yellow_pin() const;
         unsigned int *get_green_pin() const;
@@ -42,6 +52,11 @@ class TrafficLightConfig {
         void set_traffic_light_id(int id);
         void set_traffic_light_name(string instance_name);
         void set_traffic_light_address(string address);
+        void set_tlon_endpoint(string endpoint);
+        void set_tloff_endpoint(string endpoint);
+        void set_tlt_endpoint(string endpoint);
+        void set_tlyb_endpoint(string endpoint);
+
         void set_start_delay(int delay);
         void set_red_pin(const int red);
         void set_yellow_pin(const int yellow);

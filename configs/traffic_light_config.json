@@ -16,7 +16,11 @@
     "TL-000001": {
         "id": "1",
         "name": "TL-000001",
-        "address": "192.168.1.13",
+        "address": "http://192.168.1.13",
+        "tlon_endpoint": "/switch/tlon/turn_on",
+        "tloff_endpoint": "/switch/tloff/turn_on",
+        "tlt_endpoint": "/switch/tlt/turn_on",
+        "tlyb_endpoint": "/switch/tlyb/turn_on",
         "red_pin": "17",
         "yellow_pin": "27",
         "green_pin": "22",

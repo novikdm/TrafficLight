@@ -56,6 +56,10 @@ pt::ptree TrafficLightConfigMapper::tl_config_instance_to_json(const TrafficLigh
     tree.put("id", cfg.get_traffic_light_id());
     tree.put("name", cfg.get_traffic_light_name());
     tree.put("address", cfg.get_traffic_light_address());
+    tree.put("tlon_endpoint", cfg.get_tlon_endpoint());
+    tree.put("tloff_endpoint", cfg.get_tloff_endpoint());
+    tree.put("tlt_endpoint", cfg.get_tlt_endpoint());
+    tree.put("tlyb_endpoint", cfg.get_tlyb_endpoint());
     tree.put("red_pin", cfg.get_red_pin());
     tree.put("yellow_pin", cfg.get_yellow_pin());
     tree.put("green_pin", cfg.get_green_pin());
@@ -113,6 +117,10 @@ TrafficLightConfig TrafficLightConfigMapper::map_from_ptree_to_object(const pt::
     config.set_traffic_light_id(instanse.get<int>("id"));
     config.set_traffic_light_name(instanse.get<std::string>("name"));
     config.set_traffic_light_address(instanse.get<std::string>("address"));
+    config.set_tlon_endpoint(instanse.get<std::string>("tlon_endpoint"));
+    config.set_tloff_endpoint(instanse.get<std::string>("tloff_endpoint"));
+    config.set_tlt_endpoint(instanse.get<std::string>("tlt_endpoint"));
+    config.set_tlyb_endpoint(instanse.get<std::string>("tlyb_endpoint"));
     config.set_red_pin(instanse.get<int>("red_pin"));
     config.set_green_pin(instanse.get<int>("green_pin"));
     config.set_yellow_pin(instanse.get<int>("yellow_pin"));

@@ -16,6 +16,7 @@
                 "${workspaceFolder}\\lib\\controller\\TrafficLightController.cpp",
                 "${workspaceFolder}\\lib\\logger\\Logger.cpp",
                 "${workspaceFolder}\\lib\\logger\\LogLevel.cpp",
+                "-lcurl",
                 "-o",
                 "${fileDirname}\\main.exe"
             ],

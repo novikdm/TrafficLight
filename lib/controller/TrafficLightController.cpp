@@ -6,6 +6,8 @@
 #include <unistd.h>
 #include <atomic>
 #include "../logger/Logger.cpp"
+#include "curl/curl.h"
+using namespace std;
 
 TrafficLightController::TrafficLightController(TrafficLightConfig *config, bool debug_mode, gpiod_chip *chip, std::atomic<bool> *is_thread_running, std::atomic<bool> *stop_thread) : config(config), chip(chip), is_thread_running(is_thread_running), stop_thread(stop_thread), debug_mode(debug_mode) {
     is_local = (*config).get_traffic_light_address() == "GPIO";
@@ -59,6 +61,41 @@ TrafficLightController::~TrafficLightController(){
         release_gpiod_line_requests();
     }
     Logger::logDebug(debug_mode, "TrafficLightController DESTRUCTOR END");
+}
+
+static size_t TrafficLightController::WriteCallback(void* contents, size_t size, size_t nmemb, void* userp) {
+    size_t totalSize = size * nmemb;
+    string* response = static_cast<string*>(userp);
+    response->append(static_cast<char*>(contents), totalSize);
+    return totalSize;
+}
+
+void TrafficLightController::call_api(string address) {
+    CURL* curl = curl_easy_init();
+    if (!curl) return;
+
+    string response;
+    string jsonData {""};
+
+    struct curl_slist* headers = nullptr;
+    headers = curl_slist_append(headers, "Content-Type: application/json");
+
+    curl_easy_setopt(curl, CURLOPT_URL, address.c_str());
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, jsonData.c_str());
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, jsonData.size());
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
+
+    CURLcode res = curl_easy_perform(curl);
+    if (res != CURLE_OK) {
+        Logger::logError(debug_mode, "Request failed: " + string(curl_easy_strerror(res)));
+    } else {
+        Logger::logDebug(debug_mode, "API response: " + response);
+    }
+
+    curl_slist_free_all(headers);
+    curl_easy_cleanup(curl);
 }
 
 void TrafficLightController::trafic_light_on() {
@@ -201,27 +238,26 @@ void TrafficLightController::tl_on_external() {
         std::this_thread::sleep_for(std::chrono::milliseconds((*config).get_start_delay()));
     }
     Logger::logDebug(debug_mode, "tl_on_external START");
-
+    call_api((*config).get_address() + (*config).get_tlon_endpoint());
 
     Logger::logDebug(debug_mode, "tl_on_external END");
 }
 
 void TrafficLightController::tl_off_external() {
     Logger::logDebug(debug_mode, "tl_off_external START");
-
-
+    call_api((*config).get_address() + (*config).get_tloff_endpoint());
     Logger::logDebug(debug_mode, "tl_off_external END");
 }
 
 void TrafficLightController::tl_test_external() {
     Logger::logDebug(debug_mode, "tl_test_external START");
-
+    call_api((*config).get_address() + (*config).get_tlt_endpoint());
     Logger::logDebug(debug_mode, "tl_test_external END");
 }
 
 void TrafficLightController::tl_yellow_blink_external() {
     Logger::logDebug(debug_mode, "tl_yellow_blink_external START");
-
+    call_api((*config).get_address() + (*config).get_tlyb_endpoint());
     Logger::logDebug(debug_mode, "tl_yellow_blink_external END");
 }
 
