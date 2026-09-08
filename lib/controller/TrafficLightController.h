@@ -4,7 +4,6 @@
 #include <thread>
 #include <atomic>
 #include "../config/TrafficLightConfig.h"
-using namespace std;
 
 class TrafficLightController {
     private:
@@ -31,8 +30,8 @@ class TrafficLightController {
         void tl_test_external();
         void tl_yellow_blink_external();
 
-        static size_t WriteCallback(void* contents, size_t size, size_t nmemb, void* userp);
-        void call_api(string address);
+        // static size_t WriteCallback(void* contents, size_t size, size_t nmemb, void* userp);
+        void call_api(std::string address);
 
 
 
@@ -43,7 +42,6 @@ class TrafficLightController {
         void trafic_light_off();
         void trafic_light_test();
         void trafic_light_yellow_blink();
-        void release_gpiod_line_requests();
 };
 
 #endif // _TRAFFICLIGHTCONTROLLER_H_

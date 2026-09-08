@@ -56,6 +56,7 @@ void TrafficLightConfig::initialization(string config_file_path) {
 int TrafficLightConfig::get_traffic_light_id() const { return traffic_light_id; }
 string TrafficLightConfig::get_traffic_light_name() const { return traffic_light_name; }
 string TrafficLightConfig::get_traffic_light_address() const { return traffic_light_address; }
+int TrafficLightConfig::get_start_delay() const { return start_delay; }
 string TrafficLightConfig::get_tlon_endpoint() const { return tlon_endpoint; }
 string TrafficLightConfig::get_tloff_endpoint() const { return tloff_endpoint; }
 string TrafficLightConfig::get_tlt_endpoint() const { return tlt_endpoint; }
@@ -77,6 +78,7 @@ void TrafficLightConfig::set_tlon_endpoint(string endpoint){tlon_endpoint = endp
 void TrafficLightConfig::set_tloff_endpoint(string endpoint){tloff_endpoint = endpoint;}
 void TrafficLightConfig::set_tlt_endpoint(string endpoint){tlt_endpoint = endpoint;}
 void TrafficLightConfig::set_tlyb_endpoint(string endpoint){tlyb_endpoint = endpoint;}
+void TrafficLightConfig::set_start_delay(int delay){start_delay = delay;}
 void TrafficLightConfig::set_red_pin(const int red) { red_pin = new unsigned int(red); }
 void TrafficLightConfig::set_yellow_pin(const int yellow) { yellow_pin = new unsigned int(yellow); }
 void TrafficLightConfig::set_green_pin(const int green) { green_pin = new unsigned int(green); }

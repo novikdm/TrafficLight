@@ -5,6 +5,8 @@
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/property_tree/ini_parser.hpp>
 
+using namespace std;
+
 
 TrafficLightConfigMapper::TrafficLightConfigMapper() {
     read_config_from_base_config_file(base_config_file_path);

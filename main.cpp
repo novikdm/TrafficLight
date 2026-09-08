@@ -63,7 +63,7 @@ void stop_working_thread() {
     Logger::logDebug(debug_mode, "is_thread_running=" + to_string(is_thread_running->load()));
     Logger::logDebug(debug_mode, "stop_thread="  + to_string(stop_thread->load()));
 
-    if (*is_thread_running) {
+    if (*is_thread_running || working_thread.joinable()) {
         *stop_thread = true;
         working_thread.join();
     }
