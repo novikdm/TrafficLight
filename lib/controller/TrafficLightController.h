@@ -18,6 +18,7 @@ class TrafficLightController {
         std::atomic<bool> *stop_thread {nullptr};
 
         void init_gpio_requests(gpiod_chip* chip);
+        void init_tl_external();
         void release_gpiod_line_requests();
 
         void tl_on_local();
@@ -29,6 +30,8 @@ class TrafficLightController {
         void tl_off_external();
         void tl_test_external();
         void tl_yellow_blink_external();
+        void tl_yellow_blink_off_external();
+        void tl_off_all_external();
 
         // static size_t WriteCallback(void* contents, size_t size, size_t nmemb, void* userp);
         void call_api(std::string address);

@@ -13,6 +13,8 @@ TrafficLightController::TrafficLightController(TrafficLightConfig *config, bool 
     is_local = (*config).get_traffic_light_address() == "GPIO";
     if(is_local) {
         init_gpio_requests(chip);
+    } else {
+        init_tl_external();
     }
 }
 
@@ -52,6 +54,24 @@ void TrafficLightController::init_gpio_requests(gpiod_chip *chip) {
     gpiod_request_config_set_consumer(req_green, "gpio-timer");
 
     request_green = gpiod_chip_request_lines(chip, req_green, cfg_green);
+}
+
+void TrafficLightController::init_tl_external() {
+    Logger::logDebug(debug_mode, "init_tl_external START");
+    for (auto& pair : (*config).get_config_endpoints()) {
+        if (pair.first == "red_time") {
+            call_api((*config).get_traffic_light_address() + pair.second + std::to_string((*config).get_red_time()));
+        } else if (pair.first == "yellow_time") {
+            call_api((*config).get_traffic_light_address() + pair.second + std::to_string((*config).get_yellow_time()));
+        } else if (pair.first == "green_time") {
+            call_api((*config).get_traffic_light_address() + pair.second + std::to_string((*config).get_green_time()));
+        } else if (pair.first == "green_time_blinking") {
+            call_api((*config).get_traffic_light_address() + pair.second + std::to_string((*config).get_green_time_blinking()));
+        } else if (pair.first == "yellow_time_blinking") {
+            call_api((*config).get_traffic_light_address() + pair.second + std::to_string((*config).get_yellow_blinking_period()));
+        }
+    }
+    Logger::logDebug(debug_mode, "init_tl_external END");
 }
 
 
@@ -248,6 +268,7 @@ void TrafficLightController::tl_on_external() {
         Logger::logDebug(debug_mode, "tl_on_external START start delayed");
         std::this_thread::sleep_for(std::chrono::milliseconds((*config).get_start_delay()));
     }
+    tl_off_all_external();
     Logger::logDebug(debug_mode, "tl_on_external START");
     call_api((*config).get_traffic_light_address() + (*config).get_tlon_endpoint());
 
@@ -262,13 +283,27 @@ void TrafficLightController::tl_off_external() {
 
 void TrafficLightController::tl_test_external() {
     Logger::logDebug(debug_mode, "tl_test_external START");
+    tl_off_all_external();
     call_api((*config).get_traffic_light_address() + (*config).get_tlt_endpoint());
     Logger::logDebug(debug_mode, "tl_test_external END");
 }
 
 void TrafficLightController::tl_yellow_blink_external() {
     Logger::logDebug(debug_mode, "tl_yellow_blink_external START");
+    tl_off_all_external();
     call_api((*config).get_traffic_light_address() + (*config).get_tlyb_endpoint());
     Logger::logDebug(debug_mode, "tl_yellow_blink_external END");
 }
 
+void TrafficLightController::tl_yellow_blink_off_external() {
+    Logger::logDebug(debug_mode, "tl_yellow_blink_off_external START");
+    call_api((*config).get_traffic_light_address() + (*config).get_tlyb_off_endpoint());
+    Logger::logDebug(debug_mode, "tl_yellow_blink_off_external END");
+}
+
+void TrafficLightController::tl_off_all_external() {
+    Logger::logDebug(debug_mode, "tl_off_all_external START");
+    tl_yellow_blink_off_external();
+    tl_off_external();
+    Logger::logDebug(debug_mode, "tl_off_all_external END");
+}

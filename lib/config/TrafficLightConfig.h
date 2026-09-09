@@ -1,6 +1,7 @@
 #ifndef _TRAFFICLIGHTCONFIG_H_
 #define _TRAFFICLIGHTCONFIG_H_
 #include <string>
+#include <map>
 
 class TrafficLightConfig {
 
@@ -12,6 +13,8 @@ class TrafficLightConfig {
         std::string tloff_endpoint;
         std::string tlt_endpoint;
         std::string tlyb_endpoint;
+        std::string tlyb_off_endpoint;
+        std::map<std::string, std::string> config_endpoints;
         unsigned int *red_pin {nullptr}; // GPIO pin number for the red light
         unsigned int *yellow_pin {nullptr}; // GPIO pin number for the yellow light
         unsigned int *green_pin {nullptr}; // GPIO pin number for the green light
@@ -37,6 +40,8 @@ class TrafficLightConfig {
         std::string get_tloff_endpoint() const;
         std::string get_tlt_endpoint() const;
         std::string get_tlyb_endpoint() const;
+        std::string get_tlyb_off_endpoint() const;
+        std::map<std::string, std::string> get_config_endpoints() const;
 
         unsigned int *get_red_pin() const;
         unsigned int *get_yellow_pin() const;
@@ -55,6 +60,8 @@ class TrafficLightConfig {
         void set_tloff_endpoint(std::string endpoint);
         void set_tlt_endpoint(std::string endpoint);
         void set_tlyb_endpoint(std::string endpoint);
+        void set_tlyb_off_endpoint(std::string endpoint);
+        void set_config_endpoints(const std::map<std::string, std::string> &endpoints);
 
         void set_start_delay(int delay);
         void set_red_pin(const int red);

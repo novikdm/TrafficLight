@@ -11,6 +11,7 @@ TrafficLightConfig::TrafficLightConfig()
     tloff_endpoint {"/switch/tloff/turn_on"},
     tlt_endpoint {"/switch/tlt/turn_on"},
     tlyb_endpoint {"/switch/tlyb/turn_on"},
+    tlyb_off_endpoint {"/switch/tlyb/turn_off"},
     red_pin {new unsigned int(17)},
     yellow_pin {new unsigned int(27)},
     green_pin {new unsigned int(22)},
@@ -29,6 +30,7 @@ TrafficLightConfig::TrafficLightConfig(const TrafficLightConfig &source)
       tloff_endpoint {source.tloff_endpoint},
       tlt_endpoint {source.tlt_endpoint},
       tlyb_endpoint {source.tlyb_endpoint},
+      tlyb_off_endpoint {source.tlyb_off_endpoint},
       red_pin {source.red_pin},
       yellow_pin {source.yellow_pin},
       green_pin {source.green_pin},
@@ -61,6 +63,8 @@ string TrafficLightConfig::get_tlon_endpoint() const { return tlon_endpoint; }
 string TrafficLightConfig::get_tloff_endpoint() const { return tloff_endpoint; }
 string TrafficLightConfig::get_tlt_endpoint() const { return tlt_endpoint; }
 string TrafficLightConfig::get_tlyb_endpoint() const { return tlyb_endpoint; }
+string TrafficLightConfig::get_tlyb_off_endpoint() const { return tlyb_off_endpoint; }
+std::map<std::string, std::string> TrafficLightConfig::get_config_endpoints() const { return config_endpoints; }
 unsigned int *TrafficLightConfig::get_red_pin() const { return red_pin; }
 unsigned int *TrafficLightConfig::get_yellow_pin() const { return yellow_pin; }
 unsigned int *TrafficLightConfig::get_green_pin() const { return green_pin; }
@@ -78,6 +82,8 @@ void TrafficLightConfig::set_tlon_endpoint(string endpoint){tlon_endpoint = endp
 void TrafficLightConfig::set_tloff_endpoint(string endpoint){tloff_endpoint = endpoint;}
 void TrafficLightConfig::set_tlt_endpoint(string endpoint){tlt_endpoint = endpoint;}
 void TrafficLightConfig::set_tlyb_endpoint(string endpoint){tlyb_endpoint = endpoint;}
+void TrafficLightConfig::set_tlyb_off_endpoint(string endpoint){tlyb_off_endpoint = endpoint;}
+void TrafficLightConfig::set_config_endpoints(const std::map<std::string, std::string> &endpoints) { config_endpoints = endpoints; }
 void TrafficLightConfig::set_start_delay(int delay){start_delay = delay;}
 void TrafficLightConfig::set_red_pin(const int red) { red_pin = new unsigned int(red); }
 void TrafficLightConfig::set_yellow_pin(const int yellow) { yellow_pin = new unsigned int(yellow); }
