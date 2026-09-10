@@ -1,34 +1,52 @@
 #ifndef _TRAFFICLIGHTCONFIG_H_
 #define _TRAFFICLIGHTCONFIG_H_
 #include <string>
-using namespace std;
+#include <map>
 
 class TrafficLightConfig {
+
     private:
         int traffic_light_id; // unique identifier for the traffic light configuration
-        string traffic_light_name; // unique name for the traffic light configuration instance
+        std::string traffic_light_name; // unique name for the traffic light configuration instance
+        std::string traffic_light_address; // address for the traffic light configuration instance
+        std::string tlon_endpoint;
+        std::string tloff_endpoint;
+        std::string tlt_endpoint;
+        std::string tlyb_endpoint;
+        std::string tlyb_off_endpoint;
+        std::map<std::string, std::string> config_endpoints;
         unsigned int *red_pin {nullptr}; // GPIO pin number for the red light
         unsigned int *yellow_pin {nullptr}; // GPIO pin number for the yellow light
         unsigned int *green_pin {nullptr}; // GPIO pin number for the green light
+        int start_delay; // delay before starting the traffic light
         int red_time;
         int yellow_time;
         int green_time;
         int green_time_blinking;
         int yellow_blinking_period;
-    public:
 
+    public:
         TrafficLightConfig();
-        TrafficLightConfig(string config_file_path);
+        TrafficLightConfig(std::string config_file_path);
         TrafficLightConfig(const TrafficLightConfig &source);
         ~TrafficLightConfig();
 
-        void initialization(string config_file_path);
+        void initialization(std::string config_file_path);
 
         int get_traffic_light_id() const;
-        string get_traffic_light_name() const;
+        std::string get_traffic_light_name() const;
+        std::string get_traffic_light_address() const;
+        std::string get_tlon_endpoint() const;
+        std::string get_tloff_endpoint() const;
+        std::string get_tlt_endpoint() const;
+        std::string get_tlyb_endpoint() const;
+        std::string get_tlyb_off_endpoint() const;
+        std::map<std::string, std::string> get_config_endpoints() const;
+
         unsigned int *get_red_pin() const;
         unsigned int *get_yellow_pin() const;
         unsigned int *get_green_pin() const;
+        int get_start_delay() const;
         int get_red_time() const;
         int get_yellow_time() const;
         int get_green_time() const;
@@ -36,7 +54,16 @@ class TrafficLightConfig {
         int get_yellow_blinking_period() const;
 
         void set_traffic_light_id(int id);
-        void set_traffic_light_name(string instance_name);
+        void set_traffic_light_name(std::string instance_name);
+        void set_traffic_light_address(std::string address);
+        void set_tlon_endpoint(std::string endpoint);
+        void set_tloff_endpoint(std::string endpoint);
+        void set_tlt_endpoint(std::string endpoint);
+        void set_tlyb_endpoint(std::string endpoint);
+        void set_tlyb_off_endpoint(std::string endpoint);
+        void set_config_endpoints(const std::map<std::string, std::string> &endpoints);
+
+        void set_start_delay(int delay);
         void set_red_pin(const int red);
         void set_yellow_pin(const int yellow);
         void set_green_pin(const int green);

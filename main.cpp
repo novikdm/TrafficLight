@@ -33,12 +33,12 @@ TrafficLightController *current_controller{nullptr};
 void help() {
     Logger::logInfo( "   Available commands:\n");
     Logger::logInfo("help : print instructions");
-    Logger::logInfo("rcnf : reload configs");
-    Logger::logInfo("chcnf: choose traffic light config");
-    Logger::logInfo("trlon : enable trafic light mode");
-    Logger::logInfo("trloff : disable all lights");
-    Logger::logInfo("trlyb : enable only yellow light in blinking mode");
-    Logger::logInfo("trltest : test trafic light - lights should blink one by one for a short period of time");
+    Logger::logInfo("rc : reload configs");
+    Logger::logInfo("cc: choose traffic light config");
+    Logger::logInfo("tlon : enable trafic light mode");
+    Logger::logInfo("tloff : disable all lights");
+    Logger::logInfo("tlyb : enable only yellow light in blinking mode");
+    Logger::logInfo("tlt : test trafic light - lights should blink one by one for a short period of time");
     Logger::logInfo("exit : exit program");
     Logger::logInfo("!!! NOTE: all commands case sensitive !!!");
 }
@@ -63,7 +63,7 @@ void stop_working_thread() {
     Logger::logDebug(debug_mode, "is_thread_running=" + to_string(is_thread_running->load()));
     Logger::logDebug(debug_mode, "stop_thread="  + to_string(stop_thread->load()));
 
-    if (*is_thread_running) {
+    if (*is_thread_running || working_thread.joinable()) {
         *stop_thread = true;
         working_thread.join();
     }
@@ -147,9 +147,9 @@ int main() {
 
         if (command == "help") {
             help();
-        } else if (command == "rcnf") {
+        } else if (command == "rc") {
             read_configs();
-        } else if (command == "chcnf") {
+        } else if (command == "cc") {
             parameter = "";
             Logger::logInfo("\nEnter config name: ");
             cin >> parameter;
@@ -161,37 +161,37 @@ int main() {
                 current_traffic_light = parameter;
                 current_controller = create_controller(current_traffic_light, chip);
                 if(current_controller == nullptr) {
-                    Logger::logError("No traffic light selected. Use 'chcnf' to select a traffic light.");
+                    Logger::logError("No traffic light selected. Use 'cc' to select a traffic light.");
                     continue;
                 }
                 Logger::logInfo("New traffic light selected: " + current_traffic_light);
             } else {
                 Logger::logInfo("Traffic light already selected: " + current_traffic_light);
             }
-        } else if (command == "trlon") {
+        } else if (command == "tlon") {
             if(current_controller == nullptr) {
-                Logger::logError("No traffic light selected. Use 'chcnf' to select a traffic light.");
+                Logger::logError("No traffic light selected. Use 'cc' to select a traffic light.");
                 continue;
             }
             stop_working_thread();
             working_thread = std::thread(&TrafficLightController::trafic_light_on, current_controller);
-        } else if (command == "trloff") {
+        } else if (command == "tloff") {
             if(current_controller == nullptr) {
-                Logger::logError("No traffic light selected. Use 'chcnf' to select a traffic light.");
+                Logger::logError("No traffic light selected. Use 'cc' to select a traffic light.");
                 continue;
             }
             stop_working_thread();
             (*current_controller).trafic_light_off();
-        } else if (command == "trlyb") {
+        } else if (command == "tlyb") {
             if(current_controller == nullptr) {
-                Logger::logError("No traffic light selected. Use 'chcnf' to select a traffic light.");
+                Logger::logError("No traffic light selected. Use 'cc' to select a traffic light.");
                 continue;
             }
             stop_working_thread();
             working_thread = std::thread(&TrafficLightController::trafic_light_yellow_blink, current_controller);
-        } else if (command == "trltest") {
+        } else if (command == "tlt") {
             if(current_controller == nullptr) {
-                Logger::logError("No traffic light selected. Use 'chcnf' to select a traffic light.");
+                Logger::logError("No traffic light selected. Use 'cc' to select a traffic light.");
                 continue;
             }
             stop_working_thread();

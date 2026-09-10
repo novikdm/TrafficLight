@@ -5,6 +5,8 @@
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/property_tree/ini_parser.hpp>
 
+using namespace std;
+
 
 TrafficLightConfigMapper::TrafficLightConfigMapper() {
     read_config_from_base_config_file(base_config_file_path);
@@ -55,9 +57,21 @@ pt::ptree TrafficLightConfigMapper::tl_config_instance_to_json(const TrafficLigh
 
     tree.put("id", cfg.get_traffic_light_id());
     tree.put("name", cfg.get_traffic_light_name());
+    tree.put("address", cfg.get_traffic_light_address());
+    tree.put("tlon_endpoint", cfg.get_tlon_endpoint());
+    tree.put("tloff_endpoint", cfg.get_tloff_endpoint());
+    tree.put("tlt_endpoint", cfg.get_tlt_endpoint());
+    tree.put("tlyb_endpoint", cfg.get_tlyb_endpoint());
+    tree.put("tlyb_off_endpoint", cfg.get_tlyb_off_endpoint());
+    pt::ptree config_endpoints;
+    for (const auto& endpoint : cfg.get_config_endpoints()) {
+        config_endpoints.put(endpoint.first, endpoint.second);
+    }
+    tree.add_child("config_endpoints", config_endpoints);
     tree.put("red_pin", cfg.get_red_pin());
     tree.put("yellow_pin", cfg.get_yellow_pin());
     tree.put("green_pin", cfg.get_green_pin());
+    tree.put("start_delay", cfg.get_start_delay());
     tree.put("red_time", cfg.get_red_time());
     tree.put("yellow_time", cfg.get_yellow_time());
     tree.put("green_time", cfg.get_green_time());
@@ -110,9 +124,23 @@ TrafficLightConfig TrafficLightConfigMapper::map_from_ptree_to_object(const pt::
     TrafficLightConfig config;
     config.set_traffic_light_id(instanse.get<int>("id"));
     config.set_traffic_light_name(instanse.get<std::string>("name"));
+    config.set_traffic_light_address(instanse.get<std::string>("address"));
+    config.set_tlon_endpoint(instanse.get<std::string>("tlon_endpoint"));
+    config.set_tloff_endpoint(instanse.get<std::string>("tloff_endpoint"));
+    config.set_tlt_endpoint(instanse.get<std::string>("tlt_endpoint"));
+    config.set_tlyb_endpoint(instanse.get<std::string>("tlyb_endpoint"));
+    config.set_tlyb_off_endpoint(instanse.get<std::string>("tlyb_off_endpoint", ""));
+    std::map<std::string, std::string> config_endpoints;
+    if (const auto endpoints = instanse.get_child_optional("config_endpoints")) {
+        for (const auto& endpoint : *endpoints) {
+            config_endpoints[endpoint.first] = endpoint.second.get_value<std::string>();
+        }
+    }
+    config.set_config_endpoints(config_endpoints);
     config.set_red_pin(instanse.get<int>("red_pin"));
     config.set_green_pin(instanse.get<int>("green_pin"));
     config.set_yellow_pin(instanse.get<int>("yellow_pin"));
+    config.set_start_delay(instanse.get<int>("start_delay"));
     config.set_red_time(instanse.get<int>("red_time"));
     config.set_yellow_time(instanse.get<int>("yellow_time"));
     config.set_green_time(instanse.get<int>("green_time"));

@@ -6,9 +6,16 @@
 #include <unistd.h>
 #include <atomic>
 #include "../logger/Logger.cpp"
+#include "curl/curl.h"
+using namespace std;
 
 TrafficLightController::TrafficLightController(TrafficLightConfig *config, bool debug_mode, gpiod_chip *chip, std::atomic<bool> *is_thread_running, std::atomic<bool> *stop_thread) : config(config), chip(chip), is_thread_running(is_thread_running), stop_thread(stop_thread), debug_mode(debug_mode) {
-    init_gpio_requests(chip);
+    is_local = (*config).get_traffic_light_address() == "GPIO";
+    if(is_local) {
+        init_gpio_requests(chip);
+    } else {
+        init_tl_external();
+    }
 }
 
 void TrafficLightController::init_gpio_requests(gpiod_chip *chip) {
@@ -49,15 +56,125 @@ void TrafficLightController::init_gpio_requests(gpiod_chip *chip) {
     request_green = gpiod_chip_request_lines(chip, req_green, cfg_green);
 }
 
+void TrafficLightController::init_tl_external() {
+    Logger::logDebug(debug_mode, "init_tl_external START");
+    for (auto& pair : (*config).get_config_endpoints()) {
+        if (pair.first == "red_time") {
+            call_api((*config).get_traffic_light_address() + pair.second + std::to_string((*config).get_red_time()));
+        } else if (pair.first == "yellow_time") {
+            call_api((*config).get_traffic_light_address() + pair.second + std::to_string((*config).get_yellow_time()));
+        } else if (pair.first == "green_time") {
+            call_api((*config).get_traffic_light_address() + pair.second + std::to_string((*config).get_green_time()));
+        } else if (pair.first == "green_time_blinking") {
+            call_api((*config).get_traffic_light_address() + pair.second + std::to_string((*config).get_green_time_blinking()));
+        } else if (pair.first == "yellow_time_blinking") {
+            call_api((*config).get_traffic_light_address() + pair.second + std::to_string((*config).get_yellow_blinking_period()));
+        }
+    }
+    Logger::logDebug(debug_mode, "init_tl_external END");
+}
+
+
+void TrafficLightController::release_gpiod_line_requests() {
+    Logger::logDebug(debug_mode, "release_gpiod_line_requests START");
+
+    gpiod_line_request_release(request_red);
+    gpiod_line_request_release(request_yellow);
+    gpiod_line_request_release(request_green);
+    
+    Logger::logDebug(debug_mode, "release_gpiod_line_requests END");
+}
+
 TrafficLightController::~TrafficLightController(){
     Logger::logDebug(debug_mode, "TrafficLightController DESTRUCTOR START");
     trafic_light_off();
-    release_gpiod_line_requests();
+    if(is_local) {
+        release_gpiod_line_requests();
+    }
     Logger::logDebug(debug_mode, "TrafficLightController DESTRUCTOR END");
+}
+
+static size_t WriteCallback(void* contents, size_t size, size_t nmemb, void* userp) {
+    size_t totalSize = size * nmemb;
+    string* response = static_cast<string*>(userp);
+    response->append(static_cast<char*>(contents), totalSize);
+    return totalSize;
+}
+
+void TrafficLightController::call_api(string address) {
+    CURL* curl = curl_easy_init();
+    if (!curl) return;
+
+    string response;
+    string jsonData {""};
+
+    struct curl_slist* headers = nullptr;
+    headers = curl_slist_append(headers, "Content-Type: application/json");
+
+    curl_easy_setopt(curl, CURLOPT_URL, address.c_str());
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, jsonData.c_str());
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, jsonData.size());
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
+
+    CURLcode res = curl_easy_perform(curl);
+    if (res != CURLE_OK) {
+        Logger::logError("Request failed: " + string(curl_easy_strerror(res)));
+    } else {
+        Logger::logDebug(debug_mode, "API response: " + response);
+    }
+
+    curl_slist_free_all(headers);
+    curl_easy_cleanup(curl);
 }
 
 void TrafficLightController::trafic_light_on() {
     Logger::logDebug(debug_mode, "trafic_light_on START");
+    if(is_local) {
+        tl_on_local();
+    } else {
+        tl_on_external();
+    }
+    Logger::logDebug(debug_mode, "trafic_light_on END");
+}
+
+void TrafficLightController::trafic_light_off() {
+    Logger::logDebug(debug_mode, "trafic_light_off START");
+    if(is_local) {
+        tl_off_local();
+    } else {
+        tl_off_external();
+    }
+    Logger::logDebug(debug_mode, "trafic_light_off END");
+}
+
+void TrafficLightController::trafic_light_test() {
+    Logger::logDebug(debug_mode, "trafic_light_test START");
+    if(is_local) {
+        tl_test_local();
+    } else {
+        tl_test_external();
+    }
+    Logger::logDebug(debug_mode, "trafic_light_test END");
+}
+
+void TrafficLightController::trafic_light_yellow_blink() {
+    Logger::logDebug(debug_mode, "trafic_light_yellow_blink START");
+    if(is_local) {
+        tl_yellow_blink_local();
+    } else {
+        tl_yellow_blink_external();
+    }
+    Logger::logDebug(debug_mode, "trafic_light_yellow_blink END");
+}
+
+void TrafficLightController::tl_on_local() {
+    if((*config).get_start_delay() > 0) {
+        Logger::logDebug(debug_mode, "tl_on_local START start delayed");
+        std::this_thread::sleep_for(std::chrono::milliseconds((*config).get_start_delay()));
+    }
+    Logger::logDebug(debug_mode, "tl_on_local START");
 
     *is_thread_running = true;
     while (!(*stop_thread))
@@ -87,25 +204,25 @@ void TrafficLightController::trafic_light_on() {
     *stop_thread = false;
     *is_thread_running = false;
 
-    Logger::logDebug(debug_mode, "trafic_light_on END");
+    Logger::logDebug(debug_mode, "tl_on_local END");
     Logger::logDebug(debug_mode, "is_thread_running=" + std::to_string(is_thread_running->load()));
     Logger::logDebug(debug_mode, "stop_thread=" + std::to_string(stop_thread->load()));
 }
 
-void TrafficLightController::trafic_light_off() {
-    Logger::logDebug(debug_mode, "trafic_light_off START");
+void TrafficLightController::tl_off_local() {
+    Logger::logDebug(debug_mode, "tl_off_local START");
 
     gpiod_line_request_set_value(request_red, *((*config).get_red_pin()), GPIOD_LINE_VALUE_INACTIVE);
     gpiod_line_request_set_value(request_yellow, *((*config).get_yellow_pin()), GPIOD_LINE_VALUE_INACTIVE);
     gpiod_line_request_set_value(request_green, *((*config).get_green_pin()), GPIOD_LINE_VALUE_INACTIVE);
 
-    Logger::logDebug(debug_mode, "trafic_light_off END");
+    Logger::logDebug(debug_mode, "tl_off_local END");
     Logger::logDebug(debug_mode, "is_thread_running=" + std::to_string(is_thread_running->load()));
     Logger::logDebug(debug_mode, "stop_thread=" + std::to_string(stop_thread->load()));
 }
 
-void TrafficLightController::trafic_light_test() {
-    Logger::logDebug(debug_mode, "trafic_light_test START");
+void TrafficLightController::tl_test_local() {
+    Logger::logDebug(debug_mode, "tl_test_local START");
     Logger::logDebug(debug_mode, "Trafic light test. Light on for 0.5 seconds one by one 3 times");
 
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
@@ -122,13 +239,13 @@ void TrafficLightController::trafic_light_test() {
         gpiod_line_request_set_value(request_green, *((*config).get_green_pin()), GPIOD_LINE_VALUE_INACTIVE);
     }
 
-    Logger::logDebug(debug_mode, "trafic_light_test END");
+    Logger::logDebug(debug_mode, "tl_test_local END");
     Logger::logDebug(debug_mode, "is_thread_running=" + std::to_string(is_thread_running->load()));
     Logger::logDebug(debug_mode, "stop_thread=" + std::to_string(stop_thread->load()));
 }
 
-void TrafficLightController::trafic_light_yellow_blink() {
-    Logger::logDebug(debug_mode, "trafic_light_yellow_blink START");
+void TrafficLightController::tl_yellow_blink_local() {
+    Logger::logDebug(debug_mode, "tl_yellow_blink_local START");
 
     *is_thread_running = true;
     while (!(*stop_thread))
@@ -141,17 +258,52 @@ void TrafficLightController::trafic_light_yellow_blink() {
     *stop_thread = false;
     *is_thread_running = false;
 
-    Logger::logDebug(debug_mode, "trafic_light_yellow_blink END");
+    Logger::logDebug(debug_mode, "tl_yellow_blink_local END");
     Logger::logDebug(debug_mode, "is_thread_running=" + std::to_string(is_thread_running->load()));
     Logger::logDebug(debug_mode, "stop_thread=" + std::to_string(stop_thread->load()));
 }
 
-void TrafficLightController::release_gpiod_line_requests() {
-    Logger::logDebug(debug_mode, "release_gpiod_line_requests START");
+void TrafficLightController::tl_on_external() {
+    if((*config).get_start_delay() > 0) {
+        Logger::logDebug(debug_mode, "tl_on_external START start delayed");
+        std::this_thread::sleep_for(std::chrono::milliseconds((*config).get_start_delay()));
+    }
+    tl_off_all_external();
+    Logger::logDebug(debug_mode, "tl_on_external START");
+    call_api((*config).get_traffic_light_address() + (*config).get_tlon_endpoint());
 
-    gpiod_line_request_release(request_red);
-    gpiod_line_request_release(request_yellow);
-    gpiod_line_request_release(request_green);
-    
-    Logger::logDebug(debug_mode, "release_gpiod_line_requests END");
+    Logger::logDebug(debug_mode, "tl_on_external END");
+}
+
+void TrafficLightController::tl_off_external() {
+    Logger::logDebug(debug_mode, "tl_off_external START");
+    call_api((*config).get_traffic_light_address() + (*config).get_tloff_endpoint());
+    Logger::logDebug(debug_mode, "tl_off_external END");
+}
+
+void TrafficLightController::tl_test_external() {
+    Logger::logDebug(debug_mode, "tl_test_external START");
+    tl_off_all_external();
+    call_api((*config).get_traffic_light_address() + (*config).get_tlt_endpoint());
+    Logger::logDebug(debug_mode, "tl_test_external END");
+}
+
+void TrafficLightController::tl_yellow_blink_external() {
+    Logger::logDebug(debug_mode, "tl_yellow_blink_external START");
+    tl_off_all_external();
+    call_api((*config).get_traffic_light_address() + (*config).get_tlyb_endpoint());
+    Logger::logDebug(debug_mode, "tl_yellow_blink_external END");
+}
+
+void TrafficLightController::tl_yellow_blink_off_external() {
+    Logger::logDebug(debug_mode, "tl_yellow_blink_off_external START");
+    call_api((*config).get_traffic_light_address() + (*config).get_tlyb_off_endpoint());
+    Logger::logDebug(debug_mode, "tl_yellow_blink_off_external END");
+}
+
+void TrafficLightController::tl_off_all_external() {
+    Logger::logDebug(debug_mode, "tl_off_all_external START");
+    tl_yellow_blink_off_external();
+    tl_off_external();
+    Logger::logDebug(debug_mode, "tl_off_all_external END");
 }

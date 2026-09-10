@@ -1,0 +1,12 @@
+{
+    "CR-000000": {
+        "id": "0",
+        "name": "CR-000000",
+        "address": "North street 42 - West avenue 17",
+        "type": "right_angle",
+        "traffic_lights": [
+            "TL-000000",
+            "TL-000001"
+        ]
+    }
+}

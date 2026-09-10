@@ -1,26 +1,53 @@
 {
-    "TrafficLight_1": {
+    "TL-000000": {
         "id": "0",
-        "name": "TrafficLight_1",
+        "name": "TL-000000",
+        "address": "GPIO",
+        "tlon_endpoint": "",
+        "tloff_endpoint": "",
+        "tlt_endpoint": "",
+        "tlyb_endpoint": "",
+        "config_endpoints": {
+            "red_time": "",
+            "yellow_time": "",
+            "green_time": "",
+            "green_time_blinking": "",
+            "yellow_time_blinking": ""
+        },
         "red_pin": "17",
         "yellow_pin": "27",
         "green_pin": "22",
-        "red_time": "7000",
-        "yellow_time": "1000",
-        "green_time": "13000",
-        "green_time_blinking": "2000",
+        "start_delay": "0",
+        "red_time": "20000",
+        "yellow_time": "2000",
+        "green_time": "20000",
+        "green_time_blinking": "500",
         "yellow_blinking_period": "400"
     },
-    "TrafficLight_2": {
+    "TL-000001": {
         "id": "1",
-        "name": "TrafficLight_2",
+        "name": "TL-000001",
+        "address": "http://192.168.1.13",
+        "tlon_endpoint": "/switch/tlon/turn_on",
+        "tloff_endpoint": "/switch/tloff/turn_on",
+        "tlt_endpoint": "/switch/tlt/turn_on",
+        "tlyb_endpoint": "/switch/tlyb/turn_on",
+        "tlyb_off_endpoint": "/switch/tlyb/turn_off",
+        "config_endpoints": {
+            "red_time": "/number/red_time_config/set?value=",
+            "yellow_time": "/number/yellow_time_config/set?value=",
+            "green_time": "/number/green_time_config/set?value=",
+            "green_time_blinking": "/number/green_time_blinking_config/set?value=",
+            "yellow_time_blinking": "/number/yellow_time_blinking_config/set?value="
+        },
         "red_pin": "17",
         "yellow_pin": "27",
         "green_pin": "22",
-        "red_time": "7000",
-        "yellow_time": "1000",
-        "green_time": "13000",
-        "green_time_blinking": "2000",
-        "yellow_blinking_period": "2000"
+        "start_delay": "0",
+        "red_time": "20000",
+        "yellow_time": "2000",
+        "green_time": "20000",
+        "green_time_blinking": "500",
+        "yellow_blinking_period": "400"
     }
 }
